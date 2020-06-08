@@ -1,3 +1,10 @@
+## Large files
+county_data.feather
+county_features.feather
+
+## Mac files
+.DS_Store
+
 # History files
 .Rhistory
 .Rapp.history
