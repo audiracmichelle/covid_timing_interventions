@@ -1,0 +1,221 @@
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(feather)
+library(lubridate)
+library(plotly)
+library(zoo)
+```
+
+```{r}
+safegr <- read_feather("./safegr_raw.feather")
+```
+
+```{r}
+safegr %>% 
+  filter(key == "hometime_sd") %>% 
+  pull(value) %>% summary
+```
+
+```{r}
+safegr$value[safegr$key == "hometime_sd"] <- 1440 - safegr$value[safegr$key == "hometime_sd"]
+```
+
+
+```{r}
+xx <- safegr %>% 
+  group_by(fips, key) %>% 
+  summarise(max_date = max(date))
+
+summary(xx$max_date)
+```
+
+```{r}
+xx %<>% 
+  mutate(id = paste(fips, key, sep = "_")) %>% 
+  filter(max_date < as.Date("2020-05-05"))
+
+safegr %<>% 
+  filter(!(paste(fips, key, sep = "_") %in% xx$id))
+```
+
+```{r}
+xx <- safegr %>% 
+  group_by(fips, key) %>% 
+  summarise(min_date = min(date))
+
+summary(xx$min_date)
+```
+
+```{r}
+xx %<>% 
+  mutate(id = paste(fips, key, sep = "_")) %>% 
+  filter(min_date > as.Date("2020-01-05"))
+
+safegr %<>% 
+  filter(!(paste(fips, key, sep = "_") %in% xx$id))
+```
+
+```{r}
+xx <- safegr %>% 
+  group_by(fips, key) %>% 
+  summarise(n = n())
+
+summary(xx$n)
+```
+
+```{r}
+xx %<>% 
+  mutate(id = paste(fips, key, sep = "_")) %>% 
+  filter(n < 130)
+
+safegr %<>% 
+  filter(!(paste(fips, key, sep = "_") %in% xx$id))
+```
+
+```{r}
+ggplotly(safegr %>%
+                filter(fips == "48453")  %>%
+                ggplot() +
+                geom_line(aes(x = date, y = value, color = key)))
+```
+
+```{r}
+safegr %<>% 
+  group_by(fips, key) %>% 
+  mutate(week = as.numeric(rollmean(value, 7, fill = NA))) %>% 
+  ungroup()
+```
+
+```{r}
+ggplotly(safegr %>%
+                filter(fips == "48453")  %>%
+                ggplot() +
+                geom_line(aes(x = date, y = week, color = key)))
+```
+
+```{r}
+## Baseline 
+
+get_baseline <- function(date, x) {
+  median(x[date >= as.Date("2020-01-15") & date <= as.Date("2020-02-15")])
+}
+
+safegr %<>% 
+  group_by(fips, key) %>% 
+  mutate(baseline = get_baseline(date, value)) %>%
+  ungroup()
+```
+
+```{r}
+safegr %>% 
+  group_by(key) %>%
+  summarise(min = min(baseline),
+    q10 = quantile(baseline, 0.1), 
+    q20 = quantile(baseline, 0.2))
+```
+
+```{r}
+for(k in unique(safegr$key)) {
+  baseline_ <- safegr %>% 
+    filter(key == k) %>% 
+    distinct(fips, key, baseline) %>% 
+    pull(baseline)
+  
+  safegr %<>% 
+    filter(!((key == k) & (baseline < quantile(baseline_, 0.2))))
+}
+```
+
+```{r}
+safegr %<>% 
+  mutate(relative_week = week / baseline) 
+```
+
+```{r}
+ggplotly(safegr %>%
+                filter(fips == "48453")  %>%
+                ggplot() +
+                geom_line(aes(x = date, y = relative_week, color = key)))
+```
+
+```{r}
+safegr %<>% 
+  filter(date > "2020-02-15", 
+         !is.na(week))
+```
+
+```{r}
+safegr %<>% 
+  group_by(fips, key) %>%
+  mutate(min_relative = min(relative_week, na.rm = TRUE)) %>% 
+  ungroup()
+
+xx <- safegr %>%distinct(fips, key, min_relative)
+summary(xx$min_relative)
+```
+
+```{r}
+safegr$decrease_30 <- safegr$date
+safegr$decrease_30[safegr$relative_week > 0.7] <- as.Date("2020-12-31")
+
+safegr %<>% 
+  group_by(fips, key) %>% 
+  mutate(decrease_30 = min(decrease_30)) %>% 
+  ungroup()
+
+safegr$decrease_30[safegr$decrease_30 == as.Date("2020-12-31")] <- NA
+
+safegr %>% 
+  distinct(fips, key, decrease_30) %>% 
+  pull(decrease_30) %>% summary
+```
+
+```{r}
+safegr$decrease_50 <- safegr$date
+safegr$decrease_50[safegr$relative_week > 0.5] <- as.Date("2020-12-31")
+
+safegr %<>% 
+  group_by(fips, key) %>% 
+  mutate(decrease_50 = min(decrease_50)) %>% 
+  ungroup()
+
+safegr$decrease_50[safegr$decrease_50 == as.Date("2020-12-31")] <- NA
+
+safegr %>% 
+  distinct(fips, key, decrease_50) %>% 
+  pull(decrease_50) %>% summary
+```
+
+```{r}
+#safegr %>% select(fips, key, date, relative_week, contains("decrease")) %>% head(5000) %>% view()
+
+safegr$decrease_70 <- safegr$date
+
+safegr$decrease_70[safegr$relative_week > 0.3] <- as.Date("2020-12-31")
+
+safegr %<>% 
+  group_by(fips, key) %>% 
+  mutate(decrease_70 = min(decrease_70)) %>% 
+  ungroup()
+
+safegr$decrease_70[safegr$decrease_70 == as.Date("2020-12-31")] <- NA
+
+safegr %>% 
+  distinct(fips, key, decrease_70) %>% 
+  pull(decrease_70) %>% summary
+```
+
+```{r}
+safegr %<>% 
+  distinct(fips, key, 
+           baseline, min_relative, 
+           decrease_30, decrease_50, decrease_70)
+```
+
+```{r}
+write_feather(safegr, "safegr.feather")
+```
+
+
