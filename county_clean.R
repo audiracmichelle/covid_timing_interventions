@@ -3,7 +3,10 @@ library(magrittr)
 library(feather)
 
 ## Read 
-county_clean <- read_feather("./county_raw.feather")
+#county_clean <- read_feather("./county_raw.feather")
+source("./county_raw.R")
+county_clean <- county_raw
+rm("county_raw")
 
 ## Filter counties with cases
 county_clean %<>% 
@@ -61,4 +64,5 @@ county_clean <- county_clean  %>%
          cum_cases_per_cap = cum_cases / pop,
          cum_cases_per_sq_mi = cum_cases / sq_mi)
 
-write_feather(county_clean, "./county_clean.feather")
+rm(list=setdiff(ls(), "county_clean"))
+#write_feather(county_clean, "./county_clean.feather")

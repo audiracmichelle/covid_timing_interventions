@@ -4,7 +4,10 @@ library(feather)
 library(lubridate)
 
 ## Read
-county_features <- read_feather("./county_clean.feather")
+#county_features <- read_feather("./county_clean.feather")
+source("./county_clean.R")
+county_features <- county_clean
+rm("county_clean")
 
 ## Deaths threshold
 # when did deaths exceed 3 per 10 million?
@@ -46,4 +49,5 @@ county_features %<>%
 #          county == "Travis") %>%
 #   View()
 
-write_feather(county_features, "./county_features.feather")
+rm(list=setdiff(ls(), "county_features"))
+#write_feather(county_features, "./county_features.feather")

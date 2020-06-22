@@ -4,13 +4,16 @@ library(feather)
 library(lubridate)
 
 ## Read data
-county_train <- read_feather("./county_features.feather")
+#county_train <- read_feather("./county_features.feather")
+source("./county_features.R")
+county_train <- county_features
+rm("county_features")
 
 ## Include only deaths up to May 15
 county_train %<>% 
   filter(!is.na(threshold_day), 
-         threshold_day <= as.Date("2020-05-15"),
-         date <= as.Date("2020-05-15"))
+         threshold_day <= as.Date("2020-05-21"),
+         date <= as.Date("2020-05-21"))
 
 ## Require at least 25 days since threshold
 remove_fips <- county_train %>% 
@@ -67,4 +70,14 @@ county_train %<>%
 #   filter(state == "New York",
 #          grepl("county", county)) %>% view
 
-write_feather(county_train, "./county_train.feather")
+## Create index columns
+
+county_train %<>% 
+  group_by(fips) %>% 
+  arrange(date) %>% 
+  mutate(index = row_number(), 
+         index_desc = sort(index, decreasing = TRUE)) %>% 
+  ungroup()
+
+rm(list=setdiff(ls(), "county_train"))
+#write_feather(county_train, "./county_train.feather")
