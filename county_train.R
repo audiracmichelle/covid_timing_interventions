@@ -15,11 +15,11 @@ county_train %<>%
          threshold_day <= as.Date("2020-05-21"),
          date <= as.Date("2020-05-21"))
 
-## Require at least 25 days since threshold
+## Require at least 10 days since threshold
 remove_fips <- county_train %>% 
   group_by(fips) %>% 
   summarise(max_days = max(days_since_thresh)) %>% 
-  filter(max_days < 25) %>% 
+  filter(max_days < 10) %>% 
   pull(fips)
 
 county_train <- county_train[!county_train$fips %in% remove_fips, ]
@@ -81,4 +81,4 @@ county_train %<>%
 
 rm(list=c("cum_deaths_", 
           "remove_fips"))
-#write_feather(county_train, "./county_train.feather")
+write_feather(county_train, "./county_train.feather")
