@@ -5,7 +5,7 @@ library(lubridate)
 
 ## Read data
 #county_train <- read_feather("./county_features.feather")
-source("./county_features.R")
+if(!"county_features" %in% ls()) source("./county_features.R")
 county_train <- county_features
 rm("county_features")
 
@@ -79,5 +79,6 @@ county_train %<>%
          index_desc = sort(index, decreasing = TRUE)) %>% 
   ungroup()
 
-rm(list=setdiff(ls(), "county_train"))
+rm(list=c("cum_deaths_", 
+          "remove_fips"))
 #write_feather(county_train, "./county_train.feather")

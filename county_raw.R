@@ -49,5 +49,11 @@ for(r in 1:nrow(ny_data)) {
 
 #county_clean$county[which(county_clean$cum_cases< 1)]
 
-rm(list=setdiff(ls(), "county_raw"))
+rm(list=c("county_counts", 
+             "county_desc", 
+             "diff_fips", 
+             "ny_counts", 
+             "ny_data", 
+             "r", 
+             "xx_counts"))
 #write_feather(county_raw, "./county_raw.feather")

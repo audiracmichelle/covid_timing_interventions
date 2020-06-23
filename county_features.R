@@ -5,7 +5,7 @@ library(lubridate)
 
 ## Read
 #county_features <- read_feather("./county_clean.feather")
-source("./county_clean.R")
+if(!"county_clean" %in% ls()) source("./county_clean.R")
 county_features <- county_clean
 rm("county_clean")
 
@@ -49,5 +49,4 @@ county_features %<>%
 #          county == "Travis") %>%
 #   View()
 
-rm(list=setdiff(ls(), "county_features"))
 #write_feather(county_features, "./county_features.feather")
