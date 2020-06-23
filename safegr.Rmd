@@ -217,5 +217,3 @@ safegr %<>%
 ```{r}
 write_feather(safegr, "safegr.feather")
 ```
-
-
