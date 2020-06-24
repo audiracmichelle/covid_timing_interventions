@@ -217,6 +217,12 @@ county_features %>%
 ```{r}
 county_features %>% 
   filter(index_desc == 1, 
+         fips %in% c("40109", "51710"))
+```
+
+```{r}
+county_features %>% 
+  filter(index_desc == 1, 
          !is.na(threshold_day)) %>% 
   mutate(week_num = as.numeric(strftime(threshold_day, format = "%V")), 
          week_num = if_else(week_num < 11, 0, week_num), 
@@ -317,8 +323,8 @@ library(usmap)
 ```
 
 ```{r}
-#county_train <- read_feather("./county_train.feather")
-source("./county_train.R")
+county_train <- read_feather("./county_train.feather")
+#source("./county_train.R")
 ```
 
 ```{r}
@@ -355,3 +361,23 @@ plot_usmap(data = county_map, include = county_map$fips,
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) 
 ```
+
+```{r}
+## comparing nchs population entry and county_desc pop variable
+county_train %>% 
+  filter(index_desc == 1) %>% 
+  mutate(diff_pop = pop - popul) %>%
+  ggplot() +
+  geom_histogram(aes(x = diff_pop))
+```
+
+```{r}
+county_map <- county_train %>% 
+  filter(index_desc == 1)
+
+plot_usmap(data = county_map, include = county_map$fips, 
+           values = "nchs") +
+  theme(legend.position = "right") + 
+  theme(legend.title = element_blank()) 
+```
+

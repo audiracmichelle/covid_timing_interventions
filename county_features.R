@@ -28,7 +28,7 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
  
 # use the threshold_day variable to get the time counter 
 county_features %<>%
-  mutate(days_since_thresh = date - threshold_day)
+  mutate(days_since_thresh = as.numeric(date - threshold_day))
 
 ## Include weekday
 

@@ -79,6 +79,18 @@ county_train %<>%
          index_desc = sort(index, decreasing = TRUE)) %>% 
   ungroup()
 
+## join with nchs data
+
+nchs <- read_feather("./nchs.feather")
+
+nchs %<>% 
+  select(-state, -county)
+
+county_train %<>% 
+  left_join(nchs)
+
 rm(list=c("cum_deaths_", 
-          "remove_fips"))
+          "remove_fips", 
+          "nchs"))
+
 write_feather(county_train, "./county_train.feather")
