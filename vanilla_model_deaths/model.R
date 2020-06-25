@@ -10,7 +10,7 @@ library(rstanarm)
 county_train <- read_feather("../county_train.feather")
 
 ## Train model
-options(mc.cores=4)
+options(mc.cores=2)
 model = stan_glmer.nb(
   deaths ~
     poly(days_since_thresh, 2) * (intervention) +
@@ -18,8 +18,8 @@ model = stan_glmer.nb(
   offset = log(pop),
   data=county_train,
   algorithm="meanfield",
-  iter = 50000,
-  adapt_iter = 2000,
+  iter = 150000,
+  adapt_iter = 5000,
   QR=TRUE)
 
 saveRDS(model, paste("./model.rds", sep = ""))
