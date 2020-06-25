@@ -244,6 +244,15 @@ county_features %>%
 ```
 
 ```{r}
+county_features %>% 
+  filter(index_desc == 1, 
+         !is.na(threshold_day), 
+         !is.na(stayhome), 
+         days_btwn_stayhome_thresh > 0) %>% 
+  pull(days_btwn_stayhome_thresh) %>% summary
+```
+
+```{r}
 county_map <- county_features %>% 
   filter(index_desc == 1, 
          !is.na(threshold_day), 
