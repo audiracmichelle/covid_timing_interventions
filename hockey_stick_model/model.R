@@ -13,12 +13,13 @@ county_train <- read_feather("../county_train.feather")
 options(mc.cores=2)
 model = stan_glmer.nb(
   deaths ~
-    poly(days_since_thresh, 2) * (intervention) +
+    poly(days_since_thresh, 2) * (nchs) + 
+    poly(days_since_thresh,2):(intervention + intervention:(nchs)) + 
     (poly(days_since_thresh, 2) | fips),
   offset = log(pop),
   data=county_train,
   algorithm="meanfield",
-  iter = 150000,
+  iter = 15000,
   adapt_iter = 5000,
   QR=TRUE)
 
