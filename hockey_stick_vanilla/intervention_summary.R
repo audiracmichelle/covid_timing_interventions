@@ -13,8 +13,8 @@ source("../plot_foo.R")
 
 ## modify values to obtain counterfactual
 county_pred$intervention_fit <- county_pred$intervention
-county_pred$intervention <- (county_pred$days_since_thresh >= 20 + 12) * 1
-#county_pred$intervention <- 0
+#county_pred$intervention <- (county_pred$days_since_thresh >= 20 + 12) * 1
+county_pred$intervention <- 0
 
 # county_pred %>%
 #   select(fips, date, days_since_thresh, intervention_fit,intervention) %>%
@@ -50,11 +50,11 @@ for(c in 1:6) {
   county_plots <- lapply(fips_, 
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
-                           gg_vanilla_sampling())
+                           gg_intervention_sampling())
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
-  ggsave(paste("./interv_timing_summary/", 
+  ggsave(paste("./intervention_summary/", 
                "sampling_nchs_", c, ".pdf", sep = ""), 
          county_plots, width = 15, height = 25, units = "cm")
 
