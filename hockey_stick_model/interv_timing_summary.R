@@ -8,7 +8,7 @@ library(gridExtra)
 county_pred <- read_feather("../county_train.feather")
 model <- readRDS("./model.rds")
 county_fit <- readRDS("./county_fit.rds")
-coef_clusters <- readRDS("./coef_clusters.rds")
+#coef_clusters <- readRDS("./coef_clusters.rds")
 source("../plot_foo.R")
 
 ## modify values to obtain counterfactual
@@ -40,15 +40,13 @@ county_pred %<>%
     ctr_lo = apply(county_ctr, 2, quantile, probs = 0.025),
     ctr_hi = apply(county_ctr, 2, quantile, probs = 0.975))
 
-## generate cluster summaries
-
-for(c in 1:5) {
-  fips_ <- coef_clusters %>% 
-    left_join(distinct(county_pred, fips, pop)) %>% 
-    filter(cluster == c) %>% 
+## generate nchs summaries
+for(c in 1:6) {
+    fips_ <- county_pred %>% 
+    filter(index == 1, nchs == c) %>% 
     arrange(desc(pop)) %>% 
     pull(fips)
-  
+
   county_plots <- lapply(fips_, 
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
@@ -57,8 +55,30 @@ for(c in 1:5) {
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
   ggsave(paste("./interv_timing_summary/", 
-               "sampling_cluster_", c, ".pdf", sep = ""), 
+               "sampling_nchs_", c, ".pdf", sep = ""), 
          county_plots, width = 15, height = 25, units = "cm")
-  
+
 }
+
+# ## generate cluster summaries
+
+# for(c in 1:5) {
+#   fips_ <- coef_clusters %>% 
+#     left_join(distinct(county_pred, fips, pop)) %>% 
+#     filter(cluster == c) %>% 
+#     arrange(desc(pop)) %>% 
+#     pull(fips)
+  
+#   county_plots <- lapply(fips_, 
+#                          function(x) county_pred %>% 
+#                            filter(fips == x) %>% 
+#                            gg_vanilla_sampling())
+#   county_plots <- marrangeGrob(county_plots, 
+#                                nrow = 6, ncol = 2, 
+#                                left = "", top = "")
+#   ggsave(paste("./interv_timing_summary/", 
+#                "sampling_cluster_", c, ".pdf", sep = ""), 
+#          county_plots, width = 15, height = 25, units = "cm")
+  
+# }
 
