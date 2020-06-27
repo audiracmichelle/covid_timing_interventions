@@ -31,31 +31,6 @@ county_clean %<>%
          deaths = diff(c(0,cum_deaths))) %>% 
   ungroup()
 
-## Remove timestamps with negative counts
-#length(unique(county_clean$fips))
-county_clean <- county_clean[-which(county_clean$deaths < 0), ]
-#length(unique(county_clean$fips))
-
-## Create index columns
-
-county_clean %<>% 
-  group_by(fips) %>% 
-  arrange(date) %>% 
-  mutate(index = row_number(), 
-         index_desc = sort(index, decreasing = TRUE)) %>% 
-  ungroup()
-
-#---do not do this
-## Compute cumulative cases and deaths
-#summary(county_clean$cum_cases)
-# county_clean %<>%  
-#   group_by(fips) %>% 
-#   arrange(date) %>% 
-#   mutate(cum_cases = cumsum(cases), 
-#          cum_deaths = cumsum(deaths)) %>% 
-#   ungroup()
-#summary(county_clean$cum_cases)
-
 ## Create per capita and per sq deaths and cases
 county_clean <- county_clean  %>% 
   arrange(fips, date) %>%
@@ -63,6 +38,14 @@ county_clean <- county_clean  %>%
          cum_deaths_per_sq_mi = cum_deaths / sq_mi, 
          cum_cases_per_cap = cum_cases / pop,
          cum_cases_per_sq_mi = cum_cases / sq_mi)
+
+## Create index columns
+county_clean %<>% 
+  group_by(fips) %>% 
+  arrange(date) %>% 
+  mutate(index = row_number(), 
+         index_desc = sort(index, decreasing = TRUE)) %>% 
+  ungroup()
 
 rm(list=c("popdensity_"))
 #write_feather(county_clean, "./county_clean.feather")

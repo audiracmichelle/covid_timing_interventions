@@ -126,7 +126,6 @@ source("./county_raw.R")
 max(county_raw$date, na.rm = TRUE)
 ```
 
-
 ```{r}
 county_raw[is.na(county_raw$county), c("state_code", "county_name")]
 ```
@@ -215,9 +214,21 @@ county_features %>%
 ```
 
 ```{r}
+# counties with nchs in group 1 that are filtered in county_train
 county_features %>% 
   filter(index_desc == 1, 
          fips %in% c("40109", "51710"))
+#40109 oklahoma did not enact stayhome
+#51710 virginia cum_deaths did not reach q75
+```
+
+```{r}
+## comparing nchs population entry and county_desc pop variable
+county_features %>% 
+  filter(index_desc == 1) %>% 
+  mutate(diff_pop = pop - popul) %>%
+  ggplot() +
+  geom_histogram(aes(x = diff_pop))
 ```
 
 ```{r}
@@ -265,30 +276,35 @@ plot_usmap(data = county_map, include = county_map$fips,
 ```
 
 ```{r}
+county_train <- county_features 
+
+## Remove timestamps with negative counts
+county_train <- county_train[-which(county_train$deaths < 0), ]
+
 ## Include only deaths up to May 21
-county_features %<>% 
+county_train %<>% 
   filter(!is.na(threshold_day), 
          threshold_day <= as.Date("2020-05-21"),
          date <= as.Date("2020-05-21"))
 
 ## Require at least 15 days since threshold
-remove_fips <- county_features %>% 
+remove_fips <- county_train %>% 
   group_by(fips) %>% 
   summarise(max_days = max(days_since_thresh)) %>% 
   filter(max_days < 15) %>% 
   pull(fips)
 
-county_features <- county_features[!county_features$fips %in% remove_fips, ]
-#length(unique(county_features$fips))
+county_train <- county_train[!county_train$fips %in% remove_fips, ]
+#length(unique(county_train$fips))
 
-county_features %<>% 
+county_train %<>% 
   group_by(fips) %>% 
   arrange(date) %>% 
   mutate(index = row_number(), 
          index_desc = sort(index, decreasing = TRUE)) %>% 
   ungroup()
 
-county_map <- county_features %>% 
+county_map <- county_train %>% 
   filter(index_desc == 1, 
          !is.na(threshold_day), 
          !is.na(stayhome))
@@ -300,7 +316,7 @@ plot_usmap(data = county_map, include = county_map$fips,
 ```
 
 ```{r}
-cum_deaths_ <- county_features %>% 
+cum_deaths_ <- county_train %>% 
   filter(index_desc == 1) %>% 
   pull(cum_deaths)
 
@@ -309,7 +325,7 @@ summary(cum_deaths_)
 
 ```{r}
 ## Make smaller dataset
-county_map <- county_features %>% 
+county_map <- county_train %>% 
   filter(index_desc == 1, 
          !is.na(threshold_day), 
          !is.na(stayhome)) %>% 
@@ -368,9 +384,12 @@ county_train %>%
 ```
 
 ```{r}
-summary(county_train$speed_btwn_stayhome)
+county_train %>% 
+  filter(index_desc == 1, 
+         !is.na(threshold_day), 
+         !is.na(stayhome)) %>% 
+  pull(speed_btwn_stayhome) %>% summary
 ```
-
 
 ```{r}
 county_map <- county_train %>% 
@@ -386,15 +405,6 @@ plot_usmap(data = county_map, include = county_map$fips,
 ```
 
 ```{r}
-## comparing nchs population entry and county_desc pop variable
-county_train %>% 
-  filter(index_desc == 1) %>% 
-  mutate(diff_pop = pop - popul) %>%
-  ggplot() +
-  geom_histogram(aes(x = diff_pop))
-```
-
-```{r}
 county_map <- county_train %>% 
   filter(index_desc == 1)
 
@@ -403,4 +413,3 @@ plot_usmap(data = county_map, include = county_map$fips,
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) 
 ```
-
