@@ -88,7 +88,7 @@ for(c in 1:6) {
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
-  ggsave(paste("./speed_sampling/", 
+  ggsave(paste("./speed_summary/", 
                "sampling_nchs_", c, ".pdf", sep = ""), 
          county_plots, width = 15, height = 25, units = "cm")
 
