@@ -24,9 +24,9 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
 # county_features %>%
 #   filter(state == "New York",
 #          grepl("county", county)) %>%
-#   select("date","county","state","fips","cum_cases","cum_deaths", "threshold_day") %>% view
+#   select("date","county","state","fips","cum_cases","cum_deaths","threshold_day") %>% view
  
-# use the threshold_day variable to get the time counter 
+# use the threshold_day to get the time counter 
 county_features %<>%
   mutate(days_since_thresh = as.numeric(date - threshold_day))
 
@@ -47,6 +47,16 @@ county_features %<>%
   mutate(speed_btwn_stayhome = cut(days_btwn_stayhome_thresh,
                                  c(-Inf, -7, 0, 7, 14, Inf)))
 
+## join with nchs data
+
+nchs <- read_feather("./nchs.feather")
+
+nchs %<>% 
+  select(-state, -county)
+
+county_features %<>% 
+  left_join(nchs)
+
 #length(unique(county_features$fips))
 
 # county_features %>%
@@ -54,4 +64,5 @@ county_features %<>%
 #          county == "Travis") %>%
 #   View()
 
+rm(list=c("nchs"))
 #write_feather(county_features, "./county_features.feather")

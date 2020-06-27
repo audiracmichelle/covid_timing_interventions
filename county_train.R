@@ -9,6 +9,22 @@ if(!"county_features" %in% ls()) source("./county_features.R")
 county_train <- county_features
 rm("county_features")
 
+## Remove timestamps with negative counts
+#length(unique(county_train$fips))
+county_train <- county_train[-which(county_train$deaths < 0), ]
+#length(unique(county_train$fips))
+
+#---do not do this
+## Compute cumulative cases and deaths
+#summary(county_train$cum_cases)
+# county_train %<>%  
+#   group_by(fips) %>% 
+#   arrange(date) %>% 
+#   mutate(cum_cases = cumsum(cases), 
+#          cum_deaths = cumsum(deaths)) %>% 
+#   ungroup()
+#summary(county_train$cum_cases)
+
 ## Include only deaths up to May 15
 county_train %<>% 
   filter(!is.na(threshold_day), 
@@ -79,18 +95,6 @@ county_train %<>%
          index_desc = sort(index, decreasing = TRUE)) %>% 
   ungroup()
 
-## join with nchs data
-
-nchs <- read_feather("./nchs.feather")
-
-nchs %<>% 
-  select(-state, -county)
-
-county_train %<>% 
-  left_join(nchs)
-
 rm(list=c("cum_deaths_", 
-          "remove_fips", 
-          "nchs"))
-
+          "remove_fips"))
 write_feather(county_train, "./county_train.feather")
