@@ -59,7 +59,7 @@ cum_cases_ <- county_train %>%
 remove_fips <- county_train %>% 
   group_by(fips) %>% 
   summarise(cum_cases = max(cum_cases)) %>% 
-  filter(cum_cases_ < quantile(cum_cases_, 0.6)) %>% 
+  filter(cum_cases < quantile(cum_cases_, 0.6)) %>% 
   pull(fips)
 
 county_train <- county_train[!county_train$fips %in% remove_fips, ]

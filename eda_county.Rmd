@@ -390,7 +390,7 @@ county_features %>%
   filter(index_desc == 1, 
          fips %in% c("40109", "51710"))
 #40109 oklahoma did not enact stayhome
-#51710 virginia cum_deaths did not reach q75
+#51710 virginia cum_deaths did not reach q60
 ```
 
 ```{r}
