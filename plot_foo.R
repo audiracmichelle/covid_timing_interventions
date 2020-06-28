@@ -1,3 +1,22 @@
+
+fit_sampling <- function(county_data, fit) {
+  county_data %>% 
+    mutate(
+      fit_mu = apply(fit, 2, mean),
+      fit_med = apply(fit, 2, quantile, probs = 0.5), # use posterior median to hand skewness
+      fit_lo = apply(fit, 2, quantile, probs = 0.05),
+      fit_hi = apply(fit, 2, quantile, probs = 0.95))
+}
+
+ctr_sampling <- function(county_data, ctr) {
+  county_data %>% 
+    mutate(
+      ctr_mu = apply(ctr, 2, mean),
+      ctr_med = apply(ctr, 2, quantile, probs = 0.5), # use posterior median to hand skewness
+      ctr_lo = apply(ctr, 2, quantile, probs = 0.05),
+      ctr_hi = apply(ctr, 2, quantile, probs = 0.95))
+}
+
 gg_intervention_sampling <- function(county_data) {
   county_ <- county_data %>% 
     filter(index == 1) %>% 
@@ -5,7 +24,7 @@ gg_intervention_sampling <- function(county_data) {
   
   p <- county_data %>% 
     ggplot() + 
-    geom_point(aes(x=date, y=deaths)) + 
+    geom_point(aes(x=date, y=y)) + 
     geom_line(aes(x=date, y=fit_med), 
               col = "blue") + 
     geom_ribbon(aes(x=date, ymin=fit_lo, ymax=fit_hi), 
