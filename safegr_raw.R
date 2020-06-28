@@ -98,7 +98,6 @@ rm(list = "sd_metrics")
 rm(list = "visits")
 
 ## Keep only the counties whose threshold has been reached
-#county_features <- read_feather("./county_features.feather")
 source("./county_features.R")
 
 county_features %<>% 

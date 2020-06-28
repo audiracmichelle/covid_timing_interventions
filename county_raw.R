@@ -56,4 +56,3 @@ rm(list=c("county_counts",
              "ny_data", 
              "r", 
              "xx_counts"))
-#write_feather(county_raw, "./county_raw.feather")
