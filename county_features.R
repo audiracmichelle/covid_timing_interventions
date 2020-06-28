@@ -1,10 +1,8 @@
 library(tidyverse)
 library(magrittr)
 library(feather)
-library(lubridate)
 
 ## Read
-#county_features <- read_feather("./county_clean.feather")
 if(!"county_clean" %in% ls()) source("./county_clean.R")
 county_features <- county_clean
 rm("county_clean")
@@ -29,11 +27,6 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
 # use the threshold_day to get the time counter 
 county_features %<>%
   mutate(days_since_thresh = as.numeric(date - threshold_day))
-
-## Include weekday
-
-county_features %<>% 
-  mutate(wday = as.factor(wday(date, week_start = 1)))
 
 ## Define variable that is the number of days after the 
 ## threshold that an area instituded a stay at home
@@ -67,4 +60,3 @@ county_features %<>%
 #   View()
 
 rm(list=c("nchs"))
-#write_feather(county_features, "./county_features.feather")
