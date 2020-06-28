@@ -5,22 +5,22 @@ library(lubridate)
 library(xts)
 
 ## Read data
-source("./county_features.R")
+source("./county_features_cases.R")
 county_train <- county_features
 rm("county_features")
 
 ## Remove timestamps with negative counts
 #length(unique(county_train$fips))
-county_train <- county_train[-which(county_train$deaths < 0), ]
+county_train <- county_train[-which(county_train$cases < 0), ]
 #length(unique(county_train$fips))
 
 ## Compute rolling means
 county_clean %<>% 
   group_by(fips) %>% 
   arrange(date) %>% 
-  mutate(roll_deaths = rollmean(deaths, 7, fill = NA)) %>% 
+  mutate(roll_cases = rollmean(cases, 7, fill = NA)) %>% 
   ungroup() %>% 
-  mutate(roll_deaths = round(as.numeric(roll_deaths)))
+  mutate(roll_cases = round(as.numeric(roll_cases)))
 
 #---do not do this
 ## Compute cumulative cases and deaths
@@ -33,7 +33,7 @@ county_clean %<>%
 #   ungroup()
 #summary(county_train$cum_cases)
 
-## Include only deaths up to May 15
+## Include only up to May 15
 county_train %<>% 
   filter(!is.na(threshold_day), 
          threshold_day <= as.Date("2020-05-21"),
@@ -50,16 +50,16 @@ county_train <- county_train[!county_train$fips %in% remove_fips, ]
 #length(unique(county_train$fips))
 
 ## Make smaller dataset
-cum_deaths_ <- county_train %>% 
+cum_cases_ <- county_train %>% 
   group_by(fips) %>% 
-  summarise(cum_deaths = max(cum_deaths)) %>% 
-  ungroup() %>% pull(cum_deaths)
-#summary(cum_deaths_)
+  summarise(cum_cases_ = max(cum_cases_)) %>% 
+  ungroup() %>% pull(cum_cases_)
+#summary(cum_cases_)
 
 remove_fips <- county_train %>% 
   group_by(fips) %>% 
-  summarise(cum_deaths = max(cum_deaths)) %>% 
-  filter(cum_deaths < quantile(cum_deaths_, 0.6)) %>% 
+  summarise(cum_cases_ = max(cum_cases_)) %>% 
+  filter(cum_cases_ < quantile(cum_cases_, 0.6)) %>% 
   pull(fips)
 
 county_train <- county_train[!county_train$fips %in% remove_fips, ]
@@ -103,6 +103,6 @@ county_train %<>%
          index_desc = sort(index, decreasing = TRUE)) %>% 
   ungroup()
 
-rm(list=c("cum_deaths_", 
+rm(list=c("cum_cases_", 
           "remove_fips"))
-write_feather(county_train, "./county_train.feather")
+write_feather(county_train, "./county_train_cases.feather")

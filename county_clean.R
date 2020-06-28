@@ -2,8 +2,7 @@ library(tidyverse)
 library(magrittr)
 library(feather)
 
-## Read 
-#county_clean <- read_feather("./county_raw.feather")
+## Read
 if(!"county_raw" %in% ls()) source("./county_raw.R")
 county_clean <- county_raw
 rm("county_raw")
@@ -42,7 +41,7 @@ county_clean <- county_clean  %>%
          cum_cases_per_sq_mi = cum_cases / sq_mi)
 
 ## Include weekday
-county_features %<>% 
+county_clean %<>% 
   mutate(wday = as.factor(wday(date, week_start = 1)))
 
 ## Create index columns
@@ -54,4 +53,3 @@ county_clean %<>%
   ungroup()
 
 rm(list=c("popdensity_"))
-#write_feather(county_clean, "./county_clean.feather")

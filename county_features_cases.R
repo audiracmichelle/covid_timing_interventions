@@ -8,10 +8,10 @@ if(!"county_clean" %in% ls()) source("./county_clean.R")
 county_features <- county_clean
 rm("county_clean")
 
-## Deaths threshold
-# when did deaths exceed 3 per 10 million?
+## Cases threshold
+# when did cases exceed 30 per 10 million?
 county_features$threshold_day <- county_features$date
-county_features$threshold_day[county_features$cum_deaths_per_cap < 3/1e7] <- as.Date("2020-12-31")
+county_features$threshold_day[county_features$cum_cases_per_cap < 30/1e7] <- as.Date("2020-12-31")
 
 county_features %<>%
   group_by(fips) %>%
