@@ -40,6 +40,8 @@ county_features %<>%
   mutate(speed_btwn_stayhome_thresh = cut(days_btwn_stayhome_thresh,
                                  c(-Inf, -8, 0, 7, 14, Inf)))
 
+county_features$speed_btwn_copy <- county_features$speed_btwn_stayhome_thresh
+
 ## join with nchs data
 
 nchs <- read_feather("./nchs.feather")
