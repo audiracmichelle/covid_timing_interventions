@@ -2,6 +2,7 @@ library(tidyverse)
 library(magrittr)
 library(feather)
 library(lubridate)
+library(xts)
 
 ## Read data
 #county_train <- read_feather("./county_features.feather")
@@ -13,6 +14,14 @@ rm("county_features")
 #length(unique(county_train$fips))
 county_train <- county_train[-which(county_train$deaths < 0), ]
 #length(unique(county_train$fips))
+
+## Compute rolling means
+county_clean %<>% 
+  group_by(fips) %>% 
+  arrange(date) %>% 
+  mutate(roll_deaths = rollmean(deaths, 7, fill = NA)) %>% 
+  ungroup() %>% 
+  mutate(roll_deaths = round(as.numeric(roll_deaths)))
 
 #---do not do this
 ## Compute cumulative cases and deaths

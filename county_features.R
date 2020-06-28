@@ -30,11 +30,6 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
 county_features %<>%
   mutate(days_since_thresh = as.numeric(date - threshold_day))
 
-## Include weekday
-
-county_features %<>% 
-  mutate(wday = as.factor(wday(date, week_start = 1)))
-
 ## Define variable that is the number of days after the 
 ## threshold that an area instituded a stay at home
 county_features %<>%

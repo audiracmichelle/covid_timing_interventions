@@ -17,9 +17,11 @@ popdensity_ = county_clean %>%
   distinct(fips, popdensity) %>% 
   pull(popdensity)
 #summary(popdensity_)
+# county_clean %>% 
+#   filter(is.na(popdensity)) %>% view
 
 county_clean %<>% 
-  filter(!is.na(popdensity),
+  filter(!is.na(popdensity), #removes na
          popdensity > quantile(popdensity_, 0.1, na.rm = TRUE)
   )
 
@@ -38,6 +40,10 @@ county_clean <- county_clean  %>%
          cum_deaths_per_sq_mi = cum_deaths / sq_mi, 
          cum_cases_per_cap = cum_cases / pop,
          cum_cases_per_sq_mi = cum_cases / sq_mi)
+
+## Include weekday
+county_features %<>% 
+  mutate(wday = as.factor(wday(date, week_start = 1)))
 
 ## Create index columns
 county_clean %<>% 
