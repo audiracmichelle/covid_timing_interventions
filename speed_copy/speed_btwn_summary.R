@@ -11,21 +11,21 @@ county_fit <- readRDS("./county_fit.rds")
 source("../plot_foo.R")
 
 ## modify values to obtain counterfactual
-county_pred$intervention_fit <- county_pred$intervention
-county_pred$days_btwn_fit <- county_pred$days_btwn_stayhome_thresh
-county_pred$speed_btwn_fit <- county_pred$speed_btwn_stayhome_thresh
+# county_pred$intervention_fit <- county_pred$intervention
+# county_pred$days_btwn_fit <- county_pred$days_btwn_stayhome_thresh
+# county_pred$speed_btwn_fit <- county_pred$speed_btwn_stayhome_thresh
 
 county_pred1 <- county_pred
 county_pred3 <- county_pred
 
 county_pred1 = county_pred1 %>% 
-  mutate(days_btwn_stayhome_thresh = -7) %>% 
+  mutate(days_btwn_stayhome_thresh = -8) %>% 
   mutate(speed_btwn_stayhome_thresh = cut(days_btwn_stayhome_thresh,
-                                        c(-Inf, -7, 0, 7, 14, Inf)))
+                                        c(-Inf, -8, 0, 7, 14, Inf)))
 county_pred3 = county_pred3 %>% 
   mutate(days_btwn_stayhome_thresh = 15) %>% 
   mutate(speed_btwn_stayhome_thresh = cut(days_btwn_stayhome_thresh,
-                                        c(-Inf, -7, 0, 7, 14, Inf)))
+                                        c(-Inf, -8, 0, 7, 14, Inf)))
 
 # shift intervention up or down
 county_pred1$intervention = as.numeric((county_pred1$date - county_pred1$stayhome) >= 
@@ -52,27 +52,27 @@ county_pred3$intervention = as.numeric((county_pred3$date - county_pred3$stayhom
 ## get posteriors
 
 county_ctr1 <- model %>% 
-  posterior_predict(county_pred1, draws = 500)
+  posterior_predict(county_pred1, draws = 1000)
 county_ctr3 <- model %>% 
-  posterior_predict(county_pred3, draws = 500)
+  posterior_predict(county_pred3, draws = 1000)
 
 county_pred %<>% 
   mutate(
     fit_mu = apply(county_fit, 2, mean),
     fit_med = apply(county_fit, 2, quantile, probs = 0.5), # use posterior median to hand skewness
-    fit_lo = apply(county_fit, 2, quantile, probs = 0.025),
-    fit_hi = apply(county_fit, 2, quantile, probs = 0.975)) 
+    fit_lo = apply(county_fit, 2, quantile, probs = 0.05),
+    fit_hi = apply(county_fit, 2, quantile, probs = 0.95)) 
 
   county_pred %<>% 
     mutate(
       ctr1_mu = apply(county_ctr1, 2, mean),
       ctr1_med = apply(county_ctr1, 2, quantile, probs = 0.5), # use posterior median to hand skewness
-      ctr1_lo = apply(county_ctr1, 2, quantile, probs = 0.025),
-      ctr1_hi = apply(county_ctr1, 2, quantile, probs = 0.975),
+      ctr1_lo = apply(county_ctr1, 2, quantile, probs = 0.05),
+      ctr1_hi = apply(county_ctr1, 2, quantile, probs = 0.95),
       ctr3_mu = apply(county_ctr3, 2, mean),
       ctr3_med = apply(county_ctr3, 2, quantile, probs = 0.5), # use posterior median to hand skewness
-      ctr3_lo = apply(county_ctr3, 2, quantile, probs = 0.025),
-      ctr3_hi = apply(county_ctr3, 2, quantile, probs = 0.975))
+      ctr3_lo = apply(county_ctr3, 2, quantile, probs = 0.05),
+      ctr3_hi = apply(county_ctr3, 2, quantile, probs = 0.95))
 
 ## generate nchs summaries
 for(c in 1:6) {

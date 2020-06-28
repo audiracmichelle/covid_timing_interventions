@@ -13,8 +13,13 @@ county_train <- read_feather("../county_train.feather")
 options(mc.cores=2)
 model = stan_glmer.nb(
   deaths ~
-    poly(days_since_thresh, 2) * (nchs + intervention + speed_btwn_copy:intervention) +
-    speed_btwn_stayhome_thresh +
+    # mean shifts
+    nchs + speed_btwn_copy +
+    # trend/curvature shifts
+    poly(days_since_thresh,2):(nchs + speed_btwn_stayhome_thresh + intervention) +
+    # interactions in trend/curvature shifts
+    poly(days_since_thresh,2):intervention:(speed_btwn_stayhome_thresh + nchs) +
+    # random effects
     (poly(days_since_thresh, 2) | fips),
   offset = log(pop),
   data=county_train,
