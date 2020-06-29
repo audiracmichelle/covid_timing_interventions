@@ -8,10 +8,14 @@ library(gridExtra)
 county_pred <- read_feather("../../county_train.feather")
 model <- readRDS("./model.rds")
 county_fit <- readRDS("./county_fit.rds")
-source("../plot_foo.R")
+source("../../plot_foo.R")
 
 ## define y
-county_pred$y <- county_pred$roll_deaths
+county_predv$y <- county_pred$roll_deaths
+#dim(county_pred)
+county_pred %<>% 
+  filter(!is.na(county_pred))
+#dim(county_pred)
 
 ## modify values to obtain counterfactual
 county_pred$intervention_fit <- county_pred$intervention
