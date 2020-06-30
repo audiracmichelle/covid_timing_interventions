@@ -20,8 +20,13 @@ county_train %<>%
 options(mc.cores=2)
 model = stan_glmer.nb(
   y ~ 
-  poly(days_since_thresh, 2) * (nchs) + 
-    poly(days_since_thresh,2):(intervention + intervention:(speed_btwn_stayhome_thresh + nchs)) + 
+    # mean shifts
+    nchs + speed_btwn_copy +
+    # trend/curvature shifts
+    poly(days_since_thresh,2):(nchs + speed_btwn_stayhome_thresh + intervention) +
+    # interactions in trend/curvature shifts
+    poly(days_since_thresh,2):intervention:(speed_btwn_stayhome_thresh + nchs) +
+    # random effects
     (poly(days_since_thresh, 2) | fips),
   offset = log(pop),
   data=county_train,
