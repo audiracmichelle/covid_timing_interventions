@@ -5,15 +5,16 @@ library(rstanarm)
 library(gridExtra)
 
 ## Read data
-county_pred <- read_feather("../../county_train.feather")
+county_pred <- read_feather("../../county_train_cases.feather")
 model <- readRDS("./model.rds")
 county_fit <- readRDS("./county_fit.rds")
 source("../../plot_foo.R")
 
 ## define y
-county_train %<>% 
+county_pred %<>% 
   mutate(y = roll_cases) %>% 
-  filter(!is.na(y))
+  filter(!is.na(y)) %>% 
+  filter(!is.na(y), date <= as.Date("2020-04-15"))
 
 ## obtain distribution values from fit sampling
 county_pred %<>% 
@@ -54,7 +55,8 @@ for(c in 1:6) {
   county_plots <- lapply(fips_, 
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
-                           gg_intervention_sampling())
+                           gg_intrv_sampling(name = x, 
+                           intrv_name = "intrv_decrease", lag = 2))
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
