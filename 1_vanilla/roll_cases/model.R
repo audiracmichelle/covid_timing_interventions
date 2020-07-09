@@ -9,16 +9,16 @@ county_train <- read_feather("../../county_train_cases.feather")
 ## define y
 county_train %<>% 
   mutate(y = roll_cases) %>% 
-  filter(!is.na(y))
+  filter(!is.na(y)) %>% 
+  filter(!is.na(y), days_since_thresh <= 30)
 
 ## Train model
-options(mc.cores=2)
 model = stan_glmer.nb(
   y ~
     # random effects
     (poly(days_since_thresh, 2) | fips) +
     # 2 interaction
-    t:intervention + t2:intervention
+    poly(days_since_thresh, 2) * (intrv_decrease)
   ,
   offset = log(pop),
   data=county_train,

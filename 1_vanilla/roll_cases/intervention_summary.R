@@ -14,7 +14,7 @@ source("../../plot_foo.R")
 county_pred %<>% 
   mutate(y = roll_cases) %>% 
   filter(!is.na(y)) %>% 
-  filter(!is.na(y), date <= as.Date("2020-04-15"))
+  filter(!is.na(y), days_since_thresh <= 30)
 
 ## obtain distribution values from fit sampling
 county_pred %<>% 
@@ -25,8 +25,8 @@ county_pred %<>%
     fit_hi = apply(county_fit, 2, quantile, probs = 0.95))
 
 ## modify values to obtain counterfactual
-county_pred$intervention_fit <- county_pred$intervention
-county_pred$intervention <- 0
+county_pred$intrv_decrease_fit <- county_pred$intrv_decrease
+county_pred$intrv_decrease <- 0
 
 # county_pred %>%
 #   select(fips, date, days_since_thresh, intervention_fit, intervention) %>%
@@ -56,7 +56,7 @@ for(c in 1:6) {
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
                            gg_intrv_sampling(name = x, 
-                           intrv_name = "intrv_decrease", lag = 2))
+                           intrv_name = "decrease", lag = 5))
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
