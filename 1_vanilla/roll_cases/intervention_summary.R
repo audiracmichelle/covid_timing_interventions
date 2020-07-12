@@ -11,10 +11,14 @@ county_fit <- readRDS("./county_fit.rds")
 source("../../plot_foo.R")
 
 ## define y
+#length(unique(county_pred$fips))
 county_pred %<>% 
-  mutate(y = roll_cases) %>% 
+  mutate(y = roll_cases) %>%  
   filter(!is.na(y), 
-         days_since_thresh <= 30)
+         !is.na(intrv_decrease), 
+         !is.na(intrv_stayhome),
+         days_since_thresh <= 50)
+#length(unique(county_pred$fips))
 
 ## obtain distribution values from fit sampling
 county_pred %<>% 
@@ -25,8 +29,8 @@ county_pred %<>%
     fit_hi = apply(county_fit, 2, quantile, probs = 0.95))
 
 ## modify values to obtain counterfactual
-county_pred$intrv_decrease_fit <- county_pred$intrv_decrease
 county_pred$intrv_decrease <- 0
+county_pred$intrv_stayhome <- 0
 
 # county_pred %>%
 #   select(fips, date, days_since_thresh, intrv_decrease_fit, intrv_decrease) %>%
@@ -59,7 +63,8 @@ for(c in 1:6) {
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
                            gg_intrv_sampling(name = x, 
-                           intrv_name = "decrease", lag = 5))
+                           decrease = TRUE, 
+                           stayhome = TRUE))
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
