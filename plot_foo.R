@@ -1,5 +1,5 @@
 
-gg_intrv_sampling <- function(data, name, intrv_name, lag) {
+gg_intrv_sampling <- function(data, name, decrease, stayhome) {
   p <- data %>% 
     ggplot() + 
     geom_point(aes(x=date, y=y)) + 
@@ -13,13 +13,22 @@ gg_intrv_sampling <- function(data, name, intrv_name, lag) {
                 alpha= 0.1, fill = "red") + 
     xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
 
-  if(intrv_name == "decrease") {
+  if(decrease) {
     p <- p + 
-    geom_vline(aes(xintercept = decrease_40_total_visiting), color = "blue") + 
-    geom_vline(aes(xintercept = decrease_40_total_visiting + lag), linetype="dotted", color = "blue") +
+    geom_vline(aes(xintercept = decrease_40_total_visiting), color = "purple") + 
+    geom_vline(aes(xintercept = decrease_40_total_visiting + 5), linetype="dotted", color = "purple") +
     labs(title = name, 
          x = "", y = "")
   }
+
+  if(stayhome) {
+    p <- p + 
+    geom_vline(aes(xintercept = stayhome), color = "blue") + 
+    geom_vline(aes(xintercept = stayhome + 12), linetype="dotted", color = "blue") +
+    labs(title = name, 
+         x = "", y = "")
+  }
+
   p
 }
 
