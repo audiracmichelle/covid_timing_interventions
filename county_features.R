@@ -45,7 +45,8 @@ county_descriptors %<>%
   left_join(nchs)
 #dim(county_descriptors)
 
-rm(list=c("safegr", 
+rm(list=c("cc", 
+          "safegr", 
           "nchs"))
 
 ## create county_deaths_desc
@@ -62,7 +63,8 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
 
 county_deaths_desc <- county_descriptors %>% 
   left_join(distinct(county_features, fips, threshold_day)) %>%
-  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day))
+  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day), 
+         days_btwn_decrease_thresh = as.numeric(decrease_40_total_visiting - threshold_day))
 #length(unique(county_deaths_desc$fips))
 
 ## create county_cases_desc
@@ -79,9 +81,28 @@ county_features$threshold_day[county_features$threshold_day == as.Date("2020-12-
 
 county_cases_desc <- county_descriptors %>% 
   left_join(distinct(county_features, fips, threshold_day)) %>%
-  mutate(days_btwn_decrease_thresh = as.numeric(decrease_40_total_visiting - threshold_day))
+  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day), 
+         days_btwn_decrease_thresh = as.numeric(decrease_40_total_visiting - threshold_day))
 #length(unique(county_cases_desc$fips))
-rm("county_descriptors")
+
+## get difference in days between cases threshold and deaths threashold for each county
+xx <- county_cases_desc %>% 
+  rename(threshold_cases = threshold_day) %>%
+  select(fips, threshold_cases) %>% 
+  left_join(county_deaths_desc %>% 
+              rename(threshold_deaths = threshold_day) %>% 
+              select(fips, threshold_deaths)) %>% 
+  mutate(diff_thresh = as.numeric(threshold_deaths - threshold_cases)) %>% 
+  select(fips, diff_thresh)
+
+county_cases_desc %<>%
+  left_join(xx)
+
+county_deaths_desc %<>%
+  left_join(xx)
+
+rm(list = c("county_descriptors", 
+            "xx"))
 
 ## get county_features
 #dim(county_features)

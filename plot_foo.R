@@ -1,10 +1,33 @@
+gg_fit_sampling <- function(data, name, lag_decrease = NULL, lag_stayhome = NULL) {
+  p <- data %>% 
+    ggplot() + 
+    geom_point(aes(x=date, y=y)) + 
+    geom_line(aes(x=date, y=fit_med), 
+              col = "blue") + 
+    geom_ribbon(aes(x=date, ymin=fit_lo, ymax=fit_hi), 
+                alpha= 0.1, fill = "blue") + 
+    labs(title = name, 
+         x = "", y = "") +
+    xlim(as.Date("2020-02-15"), as.Date("2020-06-30")) 
 
-gg_intervention_sampling <- function(county_data) {
-  county_ <- county_data %>% 
-    filter(index == 1) %>% 
-    pull(county)
-  
-  p <- county_data %>% 
+  if(!is.null(lag_decrease)) {
+    p <- p + 
+    geom_vline(aes(xintercept = decrease_40_total_visiting), color = "purple") + 
+    geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease), linetype="dotted", color = "purple")
+  }
+
+  if(!is.null(lag_stayhome)) {
+    p <- p + 
+    geom_vline(aes(xintercept = stayhome), color = "blue") + 
+    geom_vline(aes(xintercept = stayhome + lag_stayhome), linetype="dotted", color = "blue")
+  }
+
+  p
+
+}
+
+gg_intrv_sampling <- function(data, name, lag_decrease = NULL, lag_stayhome = NULL) {
+  p <- data %>% 
     ggplot() + 
     geom_point(aes(x=date, y=y)) + 
     geom_line(aes(x=date, y=fit_med), 
@@ -15,10 +38,47 @@ gg_intervention_sampling <- function(county_data) {
               col = "red") + 
     geom_ribbon(aes(x=date, ymin=ctr_lo, ymax=ctr_hi), 
                 alpha= 0.1, fill = "red") + 
+    labs(title = name, 
+         x = "", y = "") + 
+    xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
+
+  if(!is.null(lag_decrease)) {
+    p <- p + 
+    geom_vline(aes(xintercept = decrease_40_total_visiting), color = "purple") + 
+    geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease), linetype="dotted", color = "purple")
+  }
+
+  if(!is.null(lag_stayhome)) {
+    p <- p + 
     geom_vline(aes(xintercept = stayhome), color = "blue") + 
-    geom_vline(aes(xintercept = stayhome + 12), linetype="dotted", color = "blue") +
-    labs(title = county_, 
-         x = "", y = "")
+    geom_vline(aes(xintercept = stayhome + lag_stayhome), linetype="dotted", color = "blue")
+  }
+
+  p
+
+}
+
+gg_intrv_agg_sampling <- function(data, name, intrv_name, lag) {
+  p <- data %>% 
+    ggplot() + 
+    geom_point(aes(x=days_since_thresh, y=y)) + 
+    geom_line(aes(x=days_since_thresh, y=fit_med), 
+              col = "blue") + 
+    geom_ribbon(aes(x=days_since_thresh, ymin=fit_lo, ymax=fit_hi), 
+                alpha= 0.1, fill = "blue") + 
+    geom_line(aes(x=days_since_thresh, y=ctr_med), 
+              col = "red") + 
+    geom_ribbon(aes(x=days_since_thresh, ymin=ctr_lo, ymax=ctr_hi), 
+                alpha= 0.1, fill = "red") + 
+    xlim(-5, 40)
+  
+  if(intrv_name == "decrease") {
+    p <- p + 
+      geom_vline(aes(xintercept = days_btwn_decrease_thresh), color = "blue") + 
+      geom_vline(aes(xintercept = days_btwn_decrease_thresh + lag), linetype="dotted", color = "blue") +
+      labs(title = name, 
+           x = "", y = "")
+  }
   p
 }
 
