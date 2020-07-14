@@ -10,12 +10,12 @@ county_train <- read_feather("../../county_train_cases.feather")
 #length(unique(county_train$fips))
 county_train %<>%  
   mutate(y = roll_cases, 
-         intrv_decrease = (date - decrease_40_total_visiting >= 5) * 1, 
+         #intrv_decrease = (date - decrease_40_total_visiting >= 5) * 1, 
          intrv_stayhome = (date - stayhome >= 5) * 1, 
-         days_since_intrv_decrease = as.numeric(date - intrv_decrease - 5 + 1), 
+         #days_since_intrv_decrease = as.numeric(date - intrv_decrease - 5 + 1), 
          days_since_intrv_stayhome = as.numeric(date - stayhome - 5 + 1)) %>%
     filter(!is.na(y), 
-         !is.na(decrease_40_total_visiting), 
+         #!is.na(decrease_40_total_visiting), 
          !is.na(stayhome), 
          days_since_intrv_stayhome <= 17)
 #length(unique(county_train$fips))
