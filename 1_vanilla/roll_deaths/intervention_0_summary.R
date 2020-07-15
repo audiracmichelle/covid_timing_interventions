@@ -14,12 +14,12 @@ source("../../plot_foo.R")
 #length(unique(county_pred$fips))
 county_pred %<>%  
   mutate(y = roll_deaths, 
-         intrv_decrease = (date - decrease_40_total_visiting >= 12) * 1, 
+         #intrv_decrease = (date - decrease_40_total_visiting >= 12) * 1, 
          intrv_stayhome = (date - stayhome >= 12) * 1, 
-         days_since_intrv_decrease = as.numeric(date - intrv_decrease - 12 + 1), 
+         #days_since_intrv_decrease = as.numeric(date - intrv_decrease - 12 + 1), 
          days_since_intrv_stayhome = as.numeric(date - stayhome - 12 + 1)) %>%
     filter(!is.na(y), 
-         !is.na(decrease_40_total_visiting), 
+         #!is.na(decrease_40_total_visiting), 
          !is.na(stayhome), 
          days_since_intrv_stayhome <= 17)
 #length(unique(county_pred$fips))
