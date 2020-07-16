@@ -10,16 +10,16 @@ county_train <- read_feather("../../county_train_cases.feather")
 #length(unique(county_train$fips))
 county_train %<>%  
   mutate(y = roll_cases, 
-         intrv_stayhome = (date - stayhome >= 5) * 1, 
-         days_since_intrv_stayhome = as.numeric(date - stayhome - 5 + 1), 
-         age_45_64 = log(1e4 * age_45_64 / pop), 
+         intrv_decrease = (date - decrease_50_total_visiting >= 5) * 1, 
+         days_since_intrv_decrease = as.numeric(date - decrease_50_total_visiting - 5 + 1), 
          age_65_plus = log(1e4 * age_65_plus / pop), 
          black = log(1e4 * black / pop), 
-         hispanic = log(1e4 * hispanic / pop)
+         hispanic = log(1e4 * hispanic / pop), 
+         days_btwn_decrease_thresh = as.numeric(decrease_50_total_visiting - threshold_day)
          ) %>%
-    filter(!is.na(y),  
-         !is.na(stayhome), 
-         days_since_intrv_stayhome <= 17)
+    filter(!is.na(y), 
+         !is.na(decrease_50_total_visiting), 
+         days_since_intrv_decrease <= 17)
 #length(unique(county_train$fips))
 
 # county_train %>%
@@ -30,12 +30,12 @@ county_train %<>%
 ## Train model
 model = stan_glmer.nb(
   y ~
-    poly(days_since_thresh, 2) * (nchs + college + age_45_64 + age_65_plus + black + hispanic) + 
+    poly(days_since_thresh, 2) * (nchs + college + age_65_plus + black + hispanic) + 
     (poly(days_since_thresh, 2) | fips) +
-    days_since_intrv_stayhome:intrv_stayhome + 
-    I(days_since_intrv_stayhome^2):intrv_stayhome +
-    days_since_intrv_stayhome:intrv_stayhome:days_btwn_stayhome_thresh +
-    I(days_since_intrv_stayhome^2):intrv_stayhome:days_btwn_stayhome_thresh
+    days_since_intrv_decrease:intrv_decrease + 
+    I(days_since_intrv_decrease^2):intrv_decrease +
+    days_since_intrv_decrease:intrv_decrease:days_btwn_decrease_thresh +
+    I(days_since_intrv_decrease^2):intrv_decrease:days_btwn_decrease_thresh
   ,
   offset = log(pop),
   data=county_train,

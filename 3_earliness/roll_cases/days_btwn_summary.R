@@ -17,18 +17,16 @@ down = -14
 #length(unique(county_pred$fips))
 county_pred %<>%  
   mutate(y = roll_cases, 
-         intrv_stayhome = (date - stayhome >= 5) * 1, 
-         days_since_intrv_stayhome = as.numeric(date - stayhome - 5 + 1), 
-         age_20_44 = log(1e4 * age_20_44 / pop), 
-         age_45_64 = log(1e4 * age_45_64 / pop), 
+         intrv_decrease = (date - decrease_50_total_visiting >= 5) * 1, 
+         days_since_intrv_decrease = as.numeric(date - decrease_50_total_visiting - 5 + 1), 
          age_65_plus = log(1e4 * age_65_plus / pop), 
-         white = log(1e4 * white / pop), 
          black = log(1e4 * black / pop), 
-         hispanic = log(1e4 * hispanic / pop)
+         hispanic = log(1e4 * hispanic / pop), 
+         days_btwn_decrease_thresh = as.numeric(decrease_50_total_visiting - threshold_day)
          ) %>%
-    filter(!is.na(y),  
-         !is.na(stayhome), 
-         days_since_intrv_stayhome <= 17)
+    filter(!is.na(y), 
+         !is.na(decrease_50_total_visiting), 
+         days_since_intrv_decrease <= 17)
 #length(unique(county_pred$fips))
 
 ## obtain distribution values from fit sampling
@@ -41,24 +39,22 @@ county_pred %<>%
 
 ## modify values to obtain counterfactual
 county_pred1 = county_pred %>% 
-  mutate(days_btwn_stayhome_thresh = days_btwn_stayhome_thresh + up) %>%
-  mutate(intrv_stayhome = as.numeric(date >= stayhome + 5 + up))
+  mutate(days_btwn_decrease_thresh = days_btwn_decrease_thresh + up) %>%
+  mutate(intrv_decrease = as.numeric(date >= decrease_50_total_visiting + 5 + up))
 
 county_pred3 = county_pred %>% 
-  mutate(days_btwn_stayhome_thresh = days_btwn_stayhome_thresh + down) %>%
-  mutate(intrv_stayhome = as.numeric(date >= stayhome + 5 + down))
+  mutate(days_btwn_decrease_thresh = days_btwn_decrease_thresh + down) %>%
+  mutate(intrv_decrease = as.numeric(date >= decrease_50_total_visiting + 5 + down))
 
 # not sure what should go here
-county_pred1$days_since_intrv_stayhome <- county_pred1$days_since_intrv_stayhome + up
-county_pred3$days_since_intrv_stayhome <- county_pred3$days_since_intrv_stayhome + down
+county_pred1$days_since_intrv_decrease <- county_pred1$days_since_intrv_decrease - up
+county_pred3$days_since_intrv_decrease <- county_pred3$days_since_intrv_decrease - down
 
 ## get posteriors
 county_ctr1 <- model %>% 
   posterior_predict(county_pred1, draws = 500)
 county_ctr3 <- model %>% 
   posterior_predict(county_pred3, draws = 500)
-
-#table(county_pred$nchs, county_pred$intrv_decrease_fit)
 
 ## generate nchs summaries
 
@@ -88,14 +84,15 @@ for(c in 1:6) {
   county_plots <- lapply(fips_, 
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
-                           gg_intrv_sampling(
+                           gg_days_btwn_sampling(
                            name = name_$name[name_$fips == x], 
-                           lag_decrease = 5, 
-                           lag_stayhome = 5))
+                           up = up, 
+                           down = down, 
+                           lag = 5))
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
                                left = "", top = "")
-  ggsave(paste("./days_betwn_summary/", 
+  ggsave(paste("./days_btwn_summary/", 
                "sampling_nchs_", c, ".pdf", sep = ""), 
          county_plots, width = 15, height = 25, units = "cm")
 }
