@@ -3,9 +3,10 @@
 library(tidyverse)
 library(magrittr)
 library(feather)
-library(lubridate)
+#library(lubridate)
 library(usmap)
 library(viridis)
+library(gridExtra)
 ```
 
 ## county_desc
@@ -176,6 +177,7 @@ source("./county_features.R")
 ```
 
 ```{r}
+# all counties in county_cases_desc reached the cases threshold
 county_map <- county_deaths_desc %>% 
   mutate(no_thresh = as.factor(is.na(threshold_day)))
 
@@ -189,32 +191,37 @@ plot_usmap(data = county_map,
 
 ```{r}
 county_cases_desc %>% 
-  rename(threshold_cases = threshold_day) %>%
-  select(fips, nchs, threshold_cases) %>% 
-  left_join(county_deaths_desc %>% 
-              rename(threshold_deaths = threshold_day) %>% 
-              select(fips, nchs, threshold_deaths)) %>% 
-  mutate(diff_thresh = as.numeric(threshold_deaths - threshold_cases)) %>% 
   ggplot() +
   geom_density(aes(x = diff_thresh, fill = nchs), alpha = 0.5)
 ```
 
-
 ```{r}
-county_map <- county_cases_desc %>% 
-  rename(threshold_cases = threshold_day) %>%
-  select(fips, threshold_cases) %>% 
-  left_join(county_deaths_desc %>% 
-              rename(threshold_deaths = threshold_day) %>% 
-              select(fips, threshold_deaths)) %>% 
-  mutate(diff_thresh = as.numeric(threshold_deaths - threshold_cases))
-
-plot_usmap(data = county_map, 
-           include = county_map$fips, 
+plot_usmap(data = county_cases_desc, 
+           include = county_cases_desc$fips, 
            values = "diff_thresh") +
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) + 
   scale_fill_gradient2(low = "red", midpoint = 10, high = "blue")
+```
+
+```{r}
+county_cases_desc %>% 
+  mutate(days_betwn_decrease_stayhome = as.numeric(decrease_40_total_visiting - stayhome)) %>% 
+  ggplot() +
+  geom_density(aes(x = days_betwn_decrease_stayhome, fill = nchs), alpha = 0.5)
+
+```
+
+
+```{r}
+county_cases_desc %>% 
+  ggplot(aes(x = threshold_day, fill = nchs)) + 
+  geom_bar()
+
+county_deaths_desc %>% 
+  filter(!is.na(threshold_day)) %>%
+  ggplot(aes(x = threshold_day, fill = nchs)) + 
+  geom_bar()
 ```
 
 ```{r}
@@ -245,7 +252,6 @@ county_deaths_desc %>%
 
 ```{r}
 county_cases_desc %>%
-  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day)) %>% 
   pull(days_btwn_stayhome_thresh) %>% summary 
 
 county_deaths_desc %>% 
@@ -253,8 +259,7 @@ county_deaths_desc %>%
 ```
 
 ```{r}
-county_cases_desc %>%
-  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day)) %>% 
+county_cases_desc %>% 
   ggplot() +
   geom_density(aes(x = days_btwn_stayhome_thresh, fill = nchs), alpha = 0.5)
 
@@ -264,9 +269,7 @@ county_deaths_desc %>%
 ```
 
 ```{r}
-county_map <- county_cases_desc %>%
-  mutate(days_btwn_stayhome_thresh = as.numeric(stayhome - threshold_day))
-plot_usmap(data = county_map, include = county_map$fips, 
+plot_usmap(data = county_cases_desc, include = county_cases_desc$fips, 
            values = "days_btwn_stayhome_thresh") +
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) + 
@@ -287,110 +290,33 @@ county_cases_desc %>%
 ```
 
 ```{r}
-county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day)) %>%
-  pull(days_btwn_decrease) %>% summary
+county_cases_desc %>%
+  ggplot() +
+  geom_density(aes(x = days_btwn_decrease_thresh, fill = nchs), alpha = 0.5)
 
-county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day)) %>%
-  pull(days_btwn_decrease) %>% summary
+county_deaths_desc %>%
+  ggplot() +
+  geom_density(aes(x = days_btwn_decrease_thresh, fill = nchs), alpha = 0.5)
 ```
 
 ```{r}
-county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
-
-county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
-```
-
-```{r}
-county_map <- county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
+plot_usmap(data = county_cases_desc, include = county_cases_desc$fips, 
+           values = "days_btwn_decrease_thresh") +
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) + 
   scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
 
-county_map <- county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_school_visits - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
+plot_usmap(data = county_deaths_desc, include = county_deaths_desc$fips, 
+           values = "days_btwn_decrease_thresh") +
   theme(legend.position = "right") + 
   theme(legend.title = element_blank()) + 
   scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
 ```
 
 ```{r}
-county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_recreation_visiting - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
 
-county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_recreation_visiting - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
 ```
 
-```{r}
-county_map <- county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_recreation_visiting - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
-  theme(legend.position = "right") + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
-
-county_map <- county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_recreation_visiting - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
-  theme(legend.position = "right") + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
-```
-
-```{r}
-county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_total_visiting - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
-
-county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_total_visiting - threshold_day)) %>%
-  ggplot() +
-  geom_density(aes(x = days_btwn_decrease, fill = nchs), alpha = 0.5)
-```
-
-```{r}
-county_map <- county_cases_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_total_visiting - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
-  theme(legend.position = "right") + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
-
-county_map <- county_deaths_desc %>% 
-  mutate(days_btwn_decrease = as.numeric(decrease_40_total_visiting - threshold_day))
-
-plot_usmap(data = county_map, include = county_map$fips, 
-           values = "days_btwn_decrease") +
-  theme(legend.position = "right") + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_gradient2(low = "blue", midpoint = 0, high = "red")
-```
 
 ### safegr
 
@@ -630,6 +556,20 @@ plot_usmap(data = county_map, include = county_map$fips,
   theme(legend.title = element_blank()) +
   scale_fill_gradient2(midpoint = 40)
 ```
+
+```{r}
+county_map <- county_train_cases %>% 
+  filter(index_desc == 1, 
+         cum_deaths_per_cap > 0) %>% 
+  mutate(cum_deaths_per_cap = log(cum_deaths_per_cap))
+
+plot_usmap(data = county_map, 
+           include = county_map$fips, values = "cum_deaths_per_cap") +
+  theme(legend.position = "right") + 
+  theme(legend.title = element_blank()) +
+  scale_fill_viridis()
+```
+
 
 ```{r}
 ## distribution of nchs in county_train
