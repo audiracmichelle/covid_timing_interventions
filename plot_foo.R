@@ -82,11 +82,7 @@ gg_intrv_agg_sampling <- function(data, name, intrv_name, lag) {
   p
 }
 
-gg_days_btwn_sampling <- function(county_data, up, down) {
-  county_ <- county_data %>% 
-    filter(index == 1) %>% 
-    pull(county)
-  
+gg_days_btwn_sampling <- function(data, name, up, down, lag) {
   p <- county_data %>% 
     ggplot() + 
     geom_point(aes(x=date, y=y)) + 
@@ -103,9 +99,9 @@ gg_days_btwn_sampling <- function(county_data, up, down) {
       geom_ribbon(aes(x=date, ymin=ctr3_lo, ymax=ctr3_hi), 
                 alpha= 0.1, fill = "red") +  
     geom_vline(aes(xintercept = stayhome), color = "blue") + 
-    geom_vline(aes(xintercept = stayhome + 12), linetype="dotted", color = "blue") + 
-    geom_vline(aes(xintercept = stayhome + 12 + down), linetype="dotted", color = "green") + 
-    geom_vline(aes(xintercept = stayhome + 12 + up), linetype="dotted", color = "red") + 
+    geom_vline(aes(xintercept = stayhome + lag), linetype="dotted", color = "blue") + 
+    geom_vline(aes(xintercept = stayhome + lag + down), linetype="dotted", color = "green") + 
+    geom_vline(aes(xintercept = stayhome + lag + up), linetype="dotted", color = "red") + 
     labs(title = county_, 
          x = "", y = "")
   p
