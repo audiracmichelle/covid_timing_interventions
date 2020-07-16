@@ -1,0 +1,49 @@
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(feather)
+#library(lubridate)
+library(usmap)
+library(viridis)
+```
+
+```{r}
+county_train <- read_feather("county_train.feather")
+regions <- read_csv("./regions.csv")
+```
+
+```{r}
+regions %<>% 
+  rename(state = State, 
+         state_code = `State Code`)
+setdiff(county_train$state, regions$state)
+setdiff(county_train$state_code, regions$state_code)
+ 
+county_train %<>% 
+  left_join(regions)
+```
+
+
+```{r}
+county_map <- county_train %>% filter(index == 1)
+plot_usmap(data = county_map, include = county_map$fips, 
+           values = "Region") +
+  theme(legend.position = "right") + 
+  theme(legend.title = element_blank())
+```
+
+```{r}
+county_map <- county_train %>% filter(index == 1)
+plot_usmap(data = county_map, include = county_map$fips, 
+           values = "Division") +
+  theme(legend.position = "right") + 
+  theme(legend.title = element_blank())
+```
+
+```{r}
+table(county_map$Division, county_map$nchs)
+```
+
+
+
+
