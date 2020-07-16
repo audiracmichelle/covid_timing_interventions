@@ -1,11 +1,3 @@
----
-title: Summary
-output: html_document
-params:
-  covar: "popdensity"
----
-
-```{r, include=FALSE}
 library(tidyverse)
 library(magrittr)
 library(feather)
@@ -44,25 +36,18 @@ county_pred %<>%
     fit_hi = apply(county_fit, 2, quantile, probs = 0.95))
 
 ## modify values to obtain counterfactual
-covar_ = pull(unique(data[, c("fips", params$covar)]), params$covar)
+covar_ = pull(unique(county_pred[, c("fips", params$covar)]), params$covar)
 
 county_pred1 <- county_pred
 county_pred3 <- county_pred
 
-county_pred1 %<>% mutate(!!params$covar:=quantile(covar_, 0.20))
-county_pred3 %<>% mutate(!!params$covar:=quantile(covar_, 0.80))
+county_pred1 %<>% mutate(!!params$covar:=quantile(covar_, 0.10))
+county_pred3 %<>% mutate(!!params$covar:=quantile(covar_, 0.90))
 
 county_ctr1 <- model %>% 
   posterior_predict(county_pred1, draws = 200)
 county_ctr3 <- model %>% 
   posterior_predict(county_pred3, draws = 200)
-
-county_pred %<>% 
-  mutate(
-    fit_mu = apply(county_fit, 2, mean),
-    fit_med = apply(county_fit, 2, quantile, probs = 0.5), # use posterior median to hand skewness
-    fit_lo = apply(county_fit, 2, quantile, probs = 0.05),
-    fit_hi = apply(county_fit, 2, quantile, probs = 0.95)) 
 
 county_pred %<>% 
   mutate(
@@ -74,7 +59,6 @@ county_pred %<>%
     ctr3_med = apply(county_ctr3, 2, quantile, probs = 0.5), # use posterior median to hand skewness
     ctr3_lo = apply(county_ctr3, 2, quantile, probs = 0.05),
     ctr3_hi = apply(county_ctr3, 2, quantile, probs = 0.95))
-
 
 for(c in 1:6) {
     fips_ <- county_pred %>% 
@@ -88,26 +72,22 @@ for(c in 1:6) {
       distinct(fips, state, county) %>%
       mutate(name = paste(state, county))
 
+    val_ <- unique(county_pred[county_pred$fips %in% fips_, c("fips", params$covar)])
+
   county_plots <- lapply(fips_, 
                          function(x) county_pred %>% 
                            filter(fips == x) %>% 
-                           gg_intrv_sampling(
+                           gg_covar_sampling(
                            name = name_$name[name_$fips == x], 
-                           lag_decrease = 12, 
-                           lag_stayhome = 12))
+                           covar_val = val_[val_$fips == x, params$covar],
+                           lag = 12))
   county_plots <- marrangeGrob(county_plots, 
                                nrow = 6, ncol = 2, 
-                               left = "", top = "")
-  ggsave(paste("./intervention_0_summary/", 
-               "sampling_nchs_", c, ".pdf", sep = ""), 
+                               left = "", 
+                               top = paste(params$covar, 
+                                    "q10=", round(quantile(covar_, 0.10)),
+                                    'q90=', round(quantile(covar_, 0.90))))
+  ggsave(paste("./covar_summary/", 
+               params$covar, "_sampling_nchs_", c, ".pdf", sep = ""), 
          county_plots, width = 15, height = 25, units = "cm")
 }
-
-county_plots <- lapply(fips_name[1:50], gg_county_log_deaths)
-county_plots <- marrangeGrob(
-  county_plots, 
-  nrow = 6, ncol = 2, left="log daily deaths", 
-  top = paste("counties with most deaths:", params$covar, 
-              "q20=", quantile(covar_, 0.20),'q80=', quantile(covar_, 0.80)))
-ggsave(paste(params$covar, "_sampling.pdf", sep = ""), county_plots, width = 15, height = 25, units = "cm")
-```

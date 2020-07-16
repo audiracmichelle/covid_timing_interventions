@@ -1,17 +1,11 @@
-rmarkdown::render(
-  "_summary.Rmd", 
-  params = list(model_file = "./_model.rds", covar = "popdensity"),
-  output_file = "popdensity_summary.html"
-)
+params = list(covar = "age_45_64")
+source("./covar_summary.R")
 
-rmarkdown::render(
-  "_summary.Rmd", 
-  params = list(model_file = "./_model.rds", covar = "percent_poverty"),
-  output_file = "pct_pov_summary.html"
-)
+params = list(covar = "college")
+source("./covar_summary.R")
 
-rmarkdown::render(
-  "_intervention.Rmd", 
-  params = list(model_file = "./_model.rds", covar = "intervention"),
-  output_file = "intervention_summary.html"
-)
+params = list(covar = "black")
+source("./covar_summary.R")
+
+params = list(covar = "hispanic")
+source("./covar_summary.R")
