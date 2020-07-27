@@ -10,7 +10,7 @@ county_train <- read_feather("../../county_train_decrease.feather")
 ## Train model
 model = stan_glmer.nb(
   y ~
-    poly(days_since_thresh, 2) * (diff_thresh + nchs + college + age_65_plus + black + hispanic) + 
+    poly(days_since_thresh, 2) * (nchs + college + age_65_plus + black + hispanic) + 
     (poly(days_since_thresh, 2) | fips) +
     days_since_intrv_decrease:intrv_decrease + 
     I(days_since_intrv_decrease^2):intrv_decrease + 
