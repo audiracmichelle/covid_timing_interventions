@@ -2,6 +2,7 @@ library(tidyverse)
 library(magrittr)
 library(feather)
 library(rstanarm)
+options(mc.cores = 5)
 
 ## Read county_train
 county_train <- read_feather("../../county_train_stayhome.feather")
@@ -21,9 +22,11 @@ model = stan_glmer.nb(
   ,
   offset = log(pop),
   data=county_train,
-  algorithm="meanfield",
-  iter = 50000,
-  adapt_iter = 2500,
+  # algorithm="meanfield",
+  iter = 1500,
+  warm = 1300,
+  chains=5,
+  # adapt_iter = 2500,
   QR=TRUE
 )
 
