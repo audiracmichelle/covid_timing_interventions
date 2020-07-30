@@ -439,15 +439,15 @@ main = function() {
   
   # Per capita plot per nchs
   vars = c(
-    "intervention_curve"="Stay-home intervention",
-    "random_effect_curve"="Random Effects",
-    "intervention_decrease_curve"="Mobility intervention"
+    "intervention_curve"="Additional stay-home effect",
+    # "random_effect_curve"="Random Effects",
+    "intervention_decrease_curve"="Mobility reduction effect"
   ) 
   
   curves = list()
   for (v in names(vars)) {
     tmp = list()
-    for (suffix in c("q50", "q95", "q05")) {
+    for (suffix in c("q95", "q05")) {
       field = paste(v, suffix, sep="_")
       tmp[[field]] = nchs_summaries[[field]] %>% 
         gather(t, value, -nchs) %>%
@@ -462,20 +462,21 @@ main = function() {
   curves = bind_rows(curves) %>% 
     rename(NCHS=nchs) %>% 
     mutate(
-      q50=pmin(pmax(q50, -6), 2),
-      q05=pmin(pmax(q05, -6), 2),
-      q95=pmin(pmax(q95, -6), 2)
+      # q50=pmin(pmax(q50, -6), 2),
+      q05=pmin(pmax(q05, -6), 1.5),
+      q95=pmin(pmax(q95, -6), 1.5)
     ) %>% 
     filter(NCHS <= "3")
   
   ggplot(curves) +
-    geom_line(aes(x=t, y=q50, color=var), size=1.0) +
+    # geom_line(aes(x=t, y=q50, color=var), size=1.0) +
+    geom_hline(yintercept=0, linetype=2, size=1, color="black") +
     geom_ribbon(
       aes(x=t, ymin=q05, ymax=q95, fill=var),
       alpha=0.4
     ) +
     facet_wrap(~ NCHS, labeller=label_both) +
-    labs(fill="Variable",
+    labs(fill="",
          x="Days since threshold",
          y="Effect in (log) daiy deaths") +
     guides(color=FALSE) +
@@ -485,8 +486,7 @@ main = function() {
     #   labels=c("0.1", "1", "10")
     # ) +
     theme_minimal_hgrid() +
-    scale_color_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
-    scale_fill_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
+    scale_fill_manual(values=c("#D81B60", "#1E88E5")) +
     theme(legend.position = "top")
   
   ggsave(
