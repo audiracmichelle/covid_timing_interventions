@@ -289,9 +289,9 @@ plot_usmap(data = county_deaths_desc, include = county_deaths_desc$fips,
 
 ```{r}
 county_cases_desc %>%
-  select(decrease_40_school_visits,
-         decrease_40_recreation_visiting,
-         decrease_40_total_visiting) %>% lapply(summary)
+  select(decrease_50_school_visits,
+         decrease_50_recreation_visiting,
+         decrease_50_total_visiting) %>% lapply(summary)
 ```
 
 ```{r}
