@@ -311,7 +311,7 @@ nchs_effect_summaries = function(extracted_curves) {
   # Strategy 2: Aggregate lp curves per sample
   
   nchs = map_chr(extracted_curves, ~ .x$data$nchs[1])
-  max_t = 60 # ncol(extracted_curves[[1]]$predicted_mean) - 1
+  max_t = 60   # ncol(extracted_curves[[1]]$predicted_mean) - 1
 
   agg_lp = array(0, c(1000, max_t + 1, 6))
   agg_cumdeaths = array(0, c(1000, max_t + 1, 6))

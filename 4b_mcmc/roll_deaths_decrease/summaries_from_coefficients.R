@@ -40,7 +40,7 @@ curves_by_fips = function(
   # t and t^2 is the same as in training (it orthogonalizes)
   # ideally it should be defined in the data prep script
   time_poly = poly(df$days_since_thresh, 2)
-  max_t = max(df$days_since_thresh)
+  max_t = 60 # max(df$days_since_thresh)
   
   # loop through each fips and compute curves manually
   results = list()
@@ -199,7 +199,7 @@ nchs_effect_summaries = function(extracted_curves) {
   # 
   # apply function to each extracted curve
   nchs = map_chr(extracted_curves, ~ .x$data$nchs[1])
-  max_t = ncol(extracted_curves[[1]]$predicted_mean) - 1
+  max_t = 60 #  ncol(extracted_curves[[1]]$predicted_mean) - 1
   
   summaries = list()
   # progress_bar = progress::progress_bar$new(total=length(funs))
@@ -272,7 +272,7 @@ nchs_effect_summaries = function(extracted_curves) {
 
 differences_summaries = function(curve_summary_list, df) {
 
-  max_t = max(df$days_since_thresh)
+  max_t = 60 # max(df$days_since_thresh)
   
   agg_cumdeaths_late_minus_actual = array(0, c(1000, max_t + 1, 6))
   agg_cumdeaths_actual_minus_early = array(0, c(1000, max_t + 1, 6))
@@ -714,6 +714,7 @@ for (stat_field in c("cd10", "cd20", "cd30", "cdmay1")) {
   for (d in c("early", "actual", "late")) {
     fname = paste(stat_field, d, sep="_")
     cm_tbl2[[paste0(fname, "_median")]] = stats[[d]][[stat_field]]$median
+    cm_tbl2[[paste0(fname, "_mean")]] = stats[[d]][[stat_field]]$mean
     cm_tbl2[[paste0(fname, "_q05")]] = stats[[d]][[stat_field]]$quantiles[1, ]
     cm_tbl2[[paste0(fname, "_q95")]] = stats[[d]][[stat_field]]$quantiles[5, ]
   }
@@ -729,6 +730,7 @@ for (stat_field in c("cd10_lma", "cd20_lma", "cd30_lma", "cdmay1_lma", "cd10_ame
   for (d in c("actual")) {
     fname = stat_field
     cm_tbl3[[paste0(fname, "_median")]] = stats[[d]][[stat_field]]$median
+    cm_tbl3[[paste0(fname, "_mean")]] = stats[[d]][[stat_field]]$mean
     cm_tbl3[[paste0(fname, "_q05")]] = stats[[d]][[stat_field]]$quantiles[1, ]
     cm_tbl3[[paste0(fname, "_q95")]] = stats[[d]][[stat_field]]$quantiles[5, ]
   }
@@ -745,6 +747,10 @@ tbl_list[[1]] = tibble(field=c("cd10", "cd20", "cd30", "cd_may1"))
 for (x in c("actual", "early", "late")) {
   tbl_ = tibble(
     median=c(
+      apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, median)[ c(10, 20, 30)],
+      median(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total)
+    ),
+    mean=c(
       apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, median)[ c(10, 20, 30)],
       median(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total)
     ),
@@ -768,6 +774,10 @@ for (field in c("late_minus_actual", "actual_minus_early")) {
     median=c(
       apply(cd_diffs[[fcm]], 2, median)[ c(10, 20, 30)],
       median(cd_diffs[[fmay1]])
+    ),
+    mean=c(
+      apply(cd_diffs[[fcm]], 2, mean)[ c(10, 20, 30)],
+      mean(cd_diffs[[fmay1]])
     ),
     q05=c(
       apply(cd_diffs[[fcm]], 2, quantile, 0.05)[ c(10, 20, 30)],
