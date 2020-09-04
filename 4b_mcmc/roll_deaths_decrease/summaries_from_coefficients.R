@@ -40,7 +40,7 @@ curves_by_fips = function(
   # t and t^2 is the same as in training (it orthogonalizes)
   # ideally it should be defined in the data prep script
   time_poly = poly(df$days_since_thresh, 2)
-  max_t = max(df$days_since_thresh)
+  max_t = 60 # max(df$days_since_thresh)
   
   # loop through each fips and compute curves manually
   results = list()
@@ -176,47 +176,47 @@ curves_by_fips = function(
 #' linear predictor
 nchs_effect_summaries = function(extracted_curves) {
   # list of function to be applied
-  funs = list(
-    mean_mean=function(x) apply(x$predicted_mean, 2, mean),
-    mean_q50=function(x) apply(x$predicted_mean, 2, median),
-    mean_q95=function(x) apply(x$predicted_mean, 2, quantile, 0.95),
-    mean_q05=function(x) apply(x$predicted_mean, 2, quantile, 0.05),
-    mean_q25=function(x) apply(x$predicted_mean, 2, quantile, 0.25),
-    mean_q75=function(x) apply(x$predicted_mean, 2, quantile, 0.75),
-    cum_mean=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, mean),
-    cum_q50=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, median),
-    cum_q95=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.95),
-    cum_q05=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.05),
-    cum_q25=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.25),
-    cum_q75=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.75),
-    lp_mean=function(x) apply(x$linear_predictor, 2, mean),
-    lp_q50=function(x) apply(x$linear_predictor, 2, median),
-    lp_q95=function(x) apply(x$linear_predictor, 2, quantile, 0.95),
-    lp_q05=function(x) apply(x$linear_predictor, 2, quantile, 0.05),
-    lp_q25=function(x) apply(x$linear_predictor, 2, quantile, 0.25),
-    lp_q75=function(x) apply(x$linear_predictor, 2, quantile, 0.75)
-  )
-  
+  # funs = list(
+  #   mean_mean=function(x) apply(x$predicted_mean, 2, mean),
+  #   mean_q50=function(x) apply(x$predicted_mean, 2, median),
+  #   mean_q95=function(x) apply(x$predicted_mean, 2, quantile, 0.95),
+  #   mean_q05=function(x) apply(x$predicted_mean, 2, quantile, 0.05),
+  #   mean_q25=function(x) apply(x$predicted_mean, 2, quantile, 0.25),
+  #   mean_q75=function(x) apply(x$predicted_mean, 2, quantile, 0.75),
+  #   cum_mean=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, mean),
+  #   cum_q50=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, median),
+  #   cum_q95=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.95),
+  #   cum_q05=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.05),
+  #   cum_q25=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.25),
+  #   cum_q75=function(x) apply(apply(x$predicted_mean, 1, cumsum), 1, quantile, 0.75),
+  #   lp_mean=function(x) apply(x$linear_predictor, 2, mean),
+  #   lp_q50=function(x) apply(x$linear_predictor, 2, median),
+  #   lp_q95=function(x) apply(x$linear_predictor, 2, quantile, 0.95),
+  #   lp_q05=function(x) apply(x$linear_predictor, 2, quantile, 0.05),
+  #   lp_q25=function(x) apply(x$linear_predictor, 2, quantile, 0.25),
+  #   lp_q75=function(x) apply(x$linear_predictor, 2, quantile, 0.75)
+  # )
+  # 
   # apply function to each extracted curve
   nchs = map_chr(extracted_curves, ~ .x$data$nchs[1])
-  max_t = ncol(extracted_curves[[1]]$predicted_mean) - 1
+  max_t = 60 #  ncol(extracted_curves[[1]]$predicted_mean) - 1
   
   summaries = list()
-  progress_bar = progress::progress_bar$new(total=length(funs))
-  for (i in seq_along(funs)) {
-    fname = names(funs)[i]
-    f = funs[[i]]
-    summaries[[fname]] = map(extracted_curves, f) %>% 
-      bind_rows %>% 
-      t %>% 
-      as_tibble() %>% 
-      `names<-`(sprintf("t%02d", 0:max_t)) %>% 
-      mutate(nchs=nchs) %>% 
-      group_by(nchs) %>% 
-      summarise_all(mean) 
-    progress_bar$tick()
-  }
-  
+  # progress_bar = progress::progress_bar$new(total=length(funs))
+  # for (i in seq_along(funs)) {
+  #   fname = names(funs)[i]
+  #   f = funs[[i]]
+  #   summaries[[fname]] = map(extracted_curves, f) %>% 
+  #     bind_rows %>% 
+  #     t %>% 
+  #     as_tibble() %>% 
+  #     `names<-`(sprintf("t%02d", 0:max_t)) %>% 
+  #     mutate(nchs=nchs) %>% 
+  #     group_by(nchs) %>% 
+  #     summarise_all(mean) 
+  #   progress_bar$tick()
+  # }
+  # 
   # Strategy 2: Aggregate lp curves per sample
   agg_lp = array(0, c(1000, max_t + 1, 6))
   agg_cumdeaths = array(0, c(1000, max_t + 1, 6))
@@ -250,12 +250,29 @@ nchs_effect_summaries = function(extracted_curves) {
   summaries$agg_cumdeaths = agg_cumdeaths
   summaries$agg_cumdeaths_may_1 = agg_cumdeaths_may_1
   
+  
+  # aggregate totals
+  summaries$agg_lp_total = matrix(0, 1000, max_t + 1)
+  summaries$agg_cumdeaths_total = matrix(0, 1000, max_t + 1)
+  summaries$agg_cumdeaths_may_1_total = numeric(1000)
+  
+  for (i in 1:6) {
+    summaries$agg_lp_total = summaries$agg_lp_total + summaries$agg_lp[ , , i]
+    summaries$agg_cumdeaths_total = (
+      summaries$agg_cumdeaths_total + summaries$agg_cumdeaths[ , , i]
+    )
+    summaries$agg_cumdeaths_may_1_total = (
+      summaries$agg_cumdeaths_may_1_total + summaries$agg_cumdeaths_may_1[ , i]
+    )
+  }
+  
+
   return (summaries)
 }
 
 differences_summaries = function(curve_summary_list, df) {
 
-  max_t = max(df$days_since_thresh)
+  max_t = 60 # max(df$days_since_thresh)
   
   agg_cumdeaths_late_minus_actual = array(0, c(1000, max_t + 1, 6))
   agg_cumdeaths_actual_minus_early = array(0, c(1000, max_t + 1, 6))
@@ -303,6 +320,28 @@ differences_summaries = function(curve_summary_list, df) {
   summaries$agg_cumdeaths_may_1_late_minus_actual = agg_cumdeaths_may_1_late_minus_actual
   summaries$agg_cumdeaths_may_1_actual_minus_early = agg_cumdeaths_may_1_actual_minus_early
   
+  
+  # aggregate totals
+  summaries$agg_cumdeaths_late_minus_actual_total = matrix(0, 1000, max_t + 1)
+  summaries$agg_cumdeaths_actual_minus_early_total = matrix(0, 1000, max_t + 1)
+  summaries$agg_cumdeaths_may_1_late_minus_actual_total = numeric(1000)
+  summaries$agg_cumdeaths_may_1_actual_minus_early_total = numeric(1000)
+  
+  for (i in 1:6) {
+    summaries$agg_cumdeaths_late_minus_actual_total = (
+      summaries$agg_cumdeaths_late_minus_actual_total + agg_cumdeaths_late_minus_actual[ , , i]
+    )
+    summaries$agg_cumdeaths_actual_minus_early_total = (
+      summaries$agg_cumdeaths_actual_minus_early_total + agg_cumdeaths_actual_minus_early[ , , i]
+    )
+    summaries$agg_cumdeaths_may_1_late_minus_actual_total = (
+      summaries$agg_cumdeaths_may_1_late_minus_actual_total + agg_cumdeaths_may_1_late_minus_actual[ , i]
+    )
+    summaries$agg_cumdeaths_may_1_actual_minus_early_total = (
+      summaries$agg_cumdeaths_may_1_actual_minus_early_total + agg_cumdeaths_may_1_actual_minus_early[ , i]
+    )
+  }
+
   return (summaries)
 }
 
@@ -314,44 +353,45 @@ df = read_feather("../../county_train_decrease.feather")
 
 # === actual intervention ===
 curve_summary_list = list()
+nchs_summary_list = list()
 
 # Summary for intervention as observed
 cat("computing curve summaries by fips no offset...\n")
 curve_summaries = curves_by_fips(model, df)
 cat("summarizing by nchs...\n")
 nchs_summaries = nchs_effect_summaries(curve_summaries)
-nchs_summaries_actual = nchs_summaries
+nchs_summary_list[["actual"]] = nchs_summaries
 curve_summary_list[["actual"]] = curve_summaries
 
 # Answer time to peak and peak value and plot
 # Note: [ ,-1] to remove nchs
-N = table(distinct(select(df, fips, nchs))$nchs)
-peaks_pos = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
-# in terms of 100,000 people
-peaks_val = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
-peak_flatness = c()  # zero is very flat
-for (i in 1:6) {
-  idx = peaks_pos[i] + 1
-  x = as.numeric(nchs_summaries$lp_mean[i, -1])
-  peak_nbrs = x[(idx - 1):(idx + 1)]
-  # flatness is negative second derivative
-  peak_flatness[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
-}
+# N = table(distinct(select(df, fips, nchs))$nchs)
+# peaks_pos = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
+# # in terms of 100,000 people
+# peaks_val = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
+# peak_flatness = c()  # zero is very flat
+# for (i in 1:6) {
+#   idx = peaks_pos[i] + 1
+#   x = as.numeric(nchs_summaries$lp_mean[i, -1])
+#   peak_nbrs = x[(idx - 1):(idx + 1)]
+#   # flatness is negative second derivative
+#   peak_flatness[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
+# }
 
 # Per capita plot per nchs
-q50 = nchs_summaries$lp_q50 %>% 
-  gather(t, median, -nchs) %>% 
-  mutate(t=as.integer(substring(t, 2)))
-q95 = nchs_summaries$lp_q95 %>% 
-  gather(t, q95, -nchs) %>%
-  mutate(t=as.integer(substring(t, 2)))
-q05 = nchs_summaries$lp_q05 %>% 
-  gather(t, q05, -nchs) %>%  
-  mutate(t=as.integer(substring(t, 2)))
-plotdata = reduce(
-  list(q50, q95, q05), left_join, by=c("nchs", "t")
-) %>% 
-  filter(t <= 30)
+# q50 = nchs_summaries$lp_q50 %>% 
+#   gather(t, median, -nchs) %>% 
+#   mutate(t=as.integer(substring(t, 2)))
+# q95 = nchs_summaries$lp_q95 %>% 
+#   gather(t, q95, -nchs) %>%
+#   mutate(t=as.integer(substring(t, 2)))
+# q05 = nchs_summaries$lp_q05 %>% 
+#   gather(t, q05, -nchs) %>%  
+#   mutate(t=as.integer(substring(t, 2)))
+# plotdata = reduce(
+#   list(q50, q95, q05), left_join, by=c("nchs", "t")
+# ) %>% 
+#   filter(t <= 30)
 
 # === late intervention ===
 up = 10
@@ -366,38 +406,38 @@ curve_summaries = curves_by_fips(
 curve_summary_list[["late"]] = curve_summaries
 cat("summarizing by nchs...\n")
 nchs_summaries = nchs_effect_summaries(curve_summaries)
-nchs_summaries_late = nchs_summaries
+nchs_summary_list[["late"]] = nchs_summaries
 
 # Answer time to peak and peak value and plot
 # Note: [ ,-1] to remove nchs
-N = table(distinct(select(df, fips, nchs))$nchs)
-peaks_pos_late = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
-# in terms of 100,000 people
-peaks_val_late = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
-peak_flatness_late = c()  # zero is very flat
-for (i in 1:6) {
-  idx = peaks_pos_late[i] + 1
-  x = as.numeric(nchs_summaries$lp_mean[i, -1])
-  peak_nbrs = x[(idx - 1):(idx + 1)]
-  # flatness is negative second derivative
-  peak_flatness_late[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
-}
+# N = table(distinct(select(df, fips, nchs))$nchs)
+# peaks_pos_late = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
+# # in terms of 100,000 people
+# peaks_val_late = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
+# peak_flatness_late = c()  # zero is very flat
+# for (i in 1:6) {
+#   idx = peaks_pos_late[i] + 1
+#   x = as.numeric(nchs_summaries$lp_mean[i, -1])
+#   peak_nbrs = x[(idx - 1):(idx + 1)]
+#   # flatness is negative second derivative
+#   peak_flatness_late[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
+# }
 
 # Per capita plot per nchs
-q50_late = nchs_summaries$lp_q50 %>% 
-  gather(t, median, -nchs) %>% 
-  mutate(t=as.integer(substring(t, 2)))
-q95_late = nchs_summaries$lp_q95 %>% 
-  gather(t, q95, -nchs) %>%
-  mutate(t=as.integer(substring(t, 2)))
-q05_late = nchs_summaries$lp_q05 %>% 
-  gather(t, q05, -nchs) %>%  
-  mutate(t=as.integer(substring(t, 2)))
-
-plotdata_late = reduce(
-  list(q50_late, q95_late, q05_late), left_join, by=c("nchs", "t")
-) %>% 
-  filter(t <= 30)
+# q50_late = nchs_summaries$lp_q50 %>% 
+#   gather(t, median, -nchs) %>% 
+#   mutate(t=as.integer(substring(t, 2)))
+# q95_late = nchs_summaries$lp_q95 %>% 
+#   gather(t, q95, -nchs) %>%
+#   mutate(t=as.integer(substring(t, 2)))
+# q05_late = nchs_summaries$lp_q05 %>% 
+#   gather(t, q05, -nchs) %>%  
+#   mutate(t=as.integer(substring(t, 2)))
+# 
+# plotdata_late = reduce(
+#   list(q50_late, q95_late, q05_late), left_join, by=c("nchs", "t")
+# ) %>% 
+#   filter(t <= 30)
 
 # === early intervention ===
 down = -10
@@ -412,80 +452,80 @@ curve_summaries = curves_by_fips(
 curve_summary_list[["early"]] = curve_summaries
 cat("summarizing by nchs...\n")
 nchs_summaries = nchs_effect_summaries(curve_summaries)
-nchs_summaries_early = nchs_summaries
+nchs_summary_list[["early"]] = nchs_summaries
 
 # Answer time to peak and peak value and plot
 # Note: [ ,-1] to remove nchs
-N = table(distinct(select(df, fips, nchs))$nchs)
-peaks_pos_early = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
-# in terms of 100,000 people
-peaks_val_early = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
-peak_flatness_early = c()  # zero is very flat
-for (i in 1:6) {
-  idx = peaks_pos_early[i] + 1
-  x = as.numeric(nchs_summaries$lp_mean[i, -1])
-  peak_nbrs = x[(idx - 1):(idx + 1)]
-  # flatness is negative second derivative
-  peak_flatness_early[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
-}
-
-# Per capita plot per nchs
-q50_early = nchs_summaries$lp_q50 %>% 
-  gather(t, median, -nchs) %>% 
-  mutate(t=as.integer(substring(t, 2)))
-q95_early = nchs_summaries$lp_q95 %>% 
-  gather(t, q95, -nchs) %>%
-  mutate(t=as.integer(substring(t, 2)))
-q05_early = nchs_summaries$lp_q05 %>% 
-  gather(t, q05, -nchs) %>%  
-  mutate(t=as.integer(substring(t, 2)))
-
-plotdata_early = reduce(
-  list(q50_early, q95_early, q05_early), left_join, by=c("nchs", "t")
-) %>% 
-  filter(t <= 30)
+# N = table(distinct(select(df, fips, nchs))$nchs)
+# peaks_pos_early = apply(nchs_summaries$lp_mean[ ,-1], 1, which.max) - 1
+# # in terms of 100,000 people
+# peaks_val_early = apply(1e6 * exp(nchs_summaries$lp_mean[ ,-1]), 1, max)
+# peak_flatness_early = c()  # zero is very flat
+# for (i in 1:6) {
+#   idx = peaks_pos_early[i] + 1
+#   x = as.numeric(nchs_summaries$lp_mean[i, -1])
+#   peak_nbrs = x[(idx - 1):(idx + 1)]
+#   # flatness is negative second derivative
+#   peak_flatness_early[i] = - (sum(peak_nbrs) - 3 * peak_nbrs[2])
+# }
+# 
+# # Per capita plot per nchs
+# q50_early = nchs_summaries$lp_q50 %>% 
+#   gather(t, median, -nchs) %>% 
+#   mutate(t=as.integer(substring(t, 2)))
+# q95_early = nchs_summaries$lp_q95 %>% 
+#   gather(t, q95, -nchs) %>%
+#   mutate(t=as.integer(substring(t, 2)))
+# q05_early = nchs_summaries$lp_q05 %>% 
+#   gather(t, q05, -nchs) %>%  
+#   mutate(t=as.integer(substring(t, 2)))
+# 
+# plotdata_early = reduce(
+#   list(q50_early, q95_early, q05_early), left_join, by=c("nchs", "t")
+# ) %>% 
+#   filter(t <= 30)
 
 # plots ===========================
 
-plotdata_all = bind_rows(
-  mutate(plotdata, timing="actual"),
-  mutate(plotdata_late, timing="late"),
-  mutate(plotdata_early, timing="early")
-) %>% 
-  rename(NCHS=nchs) %>% 
-  mutate(
-    median=median/log(10) + 6,
-    q05=pmin(pmax(q05/log(10) + 6, -1), 1.5),
-    q95=pmin(pmax(q95/log(10) + 6, -1), 1.5)
-  )
-
-ggplot(plotdata_all) +
-  geom_line(aes(x=t, y=median, color=timing), size=1.0) +
-  geom_ribbon(
-    aes(x=t, ymin=q05, ymax=q95, fill=timing),
-    alpha=0.4
-  ) +
-  facet_wrap(~ NCHS, labeller=label_both) +
-  labs(fill="Timing",
-       x="Days since threshold",
-       y="Daily deaths per 1 million") +
-  guides(color=FALSE, fill=FALSE) +
-  scale_y_continuous(
-    limits=c(-1, 1.5),
-    breaks=c(-1, 0, 1),
-    labels=c("0.1", "1", "10")
-  ) +
-  theme_minimal_hgrid() +
-  scale_color_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
-  scale_fill_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
-  theme(legend.position = "top")
-
-ggsave(
-  "img/nchs_timing_decrease.pdf",
-  width=16,
-  height=8,
-  units="cm"
-)
+# plotdata_all = bind_rows(
+#   mutate(plotdata, timing="actual"),
+#   mutate(plotdata_late, timing="late"),
+#   mutate(plotdata_early, timing="early")
+# ) %>% 
+#   rename(NCHS=nchs) %>% 
+#   mutate(
+#     median=median/log(10) + 6,
+#     q05=pmin(pmax(q05/log(10) + 6, -1), 1.5),
+#     q95=pmin(pmax(q95/log(10) + 6, -1), 1.5)
+#   )
+# 
+# ggplot(plotdata_all) +
+#   geom_line(aes(x=t, y=median, color=timing), size=1.0) +
+#   geom_ribbon(
+#     aes(x=t, ymin=q05, ymax=q95, fill=timing),
+#     alpha=0.4
+#   ) +
+#   facet_wrap(~ NCHS, labeller=label_both) +
+#   labs(fill="Timing",
+#        x="Days since threshold",
+#        y="Daily deaths per 1 million") +
+#   guides(color=FALSE, fill=FALSE) +
+#   scale_y_continuous(
+#     limits=c(-1, 1.5),
+#     breaks=c(-1, 0, 1),
+#     labels=c("0.1", "1", "10")
+#   ) +
+#   theme_minimal_hgrid() +
+#   scale_color_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
+#   scale_fill_manual(values=c("#0072B2", "#009E73", "#D55E00")) +
+#   theme(legend.position = "top")
+# 
+# ggsave(
+#   "img/nchs_timing_decrease.pdf",
+#   width=16,
+#   height=8,
+#   units="cm"
+# )
 # 
 # table_peaks_pos = tibble(
 #   NCHS=1:6,
@@ -527,11 +567,7 @@ nchs_counts = df %>%
   count() %>% 
   pull(n)
 
-summary_list = list(
-  "early"=nchs_summaries_early,
-  "actual"=nchs_summaries_actual,
-  "late"=nchs_summaries_late
-)
+summary_list = nchs_summary_list
 
 
 cd_diffs = differences_summaries(curve_summary_list, df)
@@ -678,6 +714,7 @@ for (stat_field in c("cd10", "cd20", "cd30", "cdmay1")) {
   for (d in c("early", "actual", "late")) {
     fname = paste(stat_field, d, sep="_")
     cm_tbl2[[paste0(fname, "_median")]] = stats[[d]][[stat_field]]$median
+    cm_tbl2[[paste0(fname, "_mean")]] = stats[[d]][[stat_field]]$mean
     cm_tbl2[[paste0(fname, "_q05")]] = stats[[d]][[stat_field]]$quantiles[1, ]
     cm_tbl2[[paste0(fname, "_q95")]] = stats[[d]][[stat_field]]$quantiles[5, ]
   }
@@ -693,6 +730,7 @@ for (stat_field in c("cd10_lma", "cd20_lma", "cd30_lma", "cdmay1_lma", "cd10_ame
   for (d in c("actual")) {
     fname = stat_field
     cm_tbl3[[paste0(fname, "_median")]] = stats[[d]][[stat_field]]$median
+    cm_tbl3[[paste0(fname, "_mean")]] = stats[[d]][[stat_field]]$mean
     cm_tbl3[[paste0(fname, "_q05")]] = stats[[d]][[stat_field]]$quantiles[1, ]
     cm_tbl3[[paste0(fname, "_q95")]] = stats[[d]][[stat_field]]$quantiles[5, ]
   }
@@ -700,4 +738,63 @@ for (stat_field in c("cd10_lma", "cd20_lma", "cd30_lma", "cdmay1_lma", "cd10_ame
 cm_tbl3
 
 write_csv(cm_tbl3, "cumstats_rolldeaths_decrease_diffs.csv")
+
+
+
+
+tbl_list = list()
+tbl_list[[1]] = tibble(field=c("cd10", "cd20", "cd30", "cd_may1"))
+for (x in c("actual", "early", "late")) {
+  tbl_ = tibble(
+    median=c(
+      apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, median)[ c(10, 20, 30)],
+      median(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total)
+    ),
+    mean=c(
+      apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, median)[ c(10, 20, 30)],
+      median(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total)
+    ),
+    q05=c(
+      apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, quantile, 0.05)[ c(10, 20, 30)],
+      quantile(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total, 0.05)
+    ),
+    q95=c(
+      apply(nchs_summary_list[[x]]$agg_cumdeaths_total, 2, quantile, 0.95)[ c(10, 20, 30)],
+      quantile(nchs_summary_list[[x]]$agg_cumdeaths_may_1_total, 0.95)
+    )
+  )
+  names(tbl_) = paste(names(tbl_), x, sep="_")
+  tbl_list[[length(tbl_list) + 1]] = tbl_
+}
+
+for (field in c("late_minus_actual", "actual_minus_early")) {
+  fcm = paste0("agg_cumdeaths_", field, "_total")
+  fmay1 = paste0("agg_cumdeaths_may_1_", field, "_total")
+  tbl_ = tibble(
+    median=c(
+      apply(cd_diffs[[fcm]], 2, median)[ c(10, 20, 30)],
+      median(cd_diffs[[fmay1]])
+    ),
+    mean=c(
+      apply(cd_diffs[[fcm]], 2, mean)[ c(10, 20, 30)],
+      mean(cd_diffs[[fmay1]])
+    ),
+    q05=c(
+      apply(cd_diffs[[fcm]], 2, quantile, 0.05)[ c(10, 20, 30)],
+      quantile(cd_diffs[[fmay1]], 0.05)
+    ),
+    q95=c(
+      apply(cd_diffs[[fcm]], 2, quantile, 0.95)[ c(10, 20, 30)],
+      quantile(cd_diffs[[fmay1]], 0.95)
+    )
+  )
+  names(tbl_) = paste(names(tbl_), field, sep="_")
+  tbl_list[[length(tbl_list) + 1]] = tbl_
+}
+
+tbl_diffs = bind_cols(tbl_list)
+
+
+write_csv(tbl_diffs, "cumstats_rolldeaths_decrease_diffs_totals.csv")
+
 
