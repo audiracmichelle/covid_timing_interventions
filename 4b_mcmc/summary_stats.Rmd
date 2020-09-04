@@ -1,0 +1,182 @@
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(feather)
+library(gridExtra)
+library(cowplot)
+```
+
+### ------ stayhome
+
+```{r}
+county_stayhome <- read_feather("../county_train_stayhome.feather")
+county_fit <- readRDS("./roll_deaths/county_fit.rds")
+county_ctr1 <- readRDS("./roll_deaths/county_ctr1.rds")
+county_ctr3 <- readRDS("./roll_deaths/county_ctr3.rds")
+
+county_stayhome %<>% 
+  mutate(row = row_number()) %>% 
+  group_by(fips) %>% 
+  arrange(date) %>% 
+  mutate(y_eff = cumsum(y), 
+         index = row_number(), 
+         index_desc = sort(index, decreasing = TRUE)) %>%
+  ungroup() %>% 
+  arrange(row)
+```
+
+```{r}
+## generate cumulative effect summary
+county_fit_effect <- matrix(nrow = 500, ncol = 0)
+county_ctr1_effect <- matrix(nrow = 500, ncol = 0)
+county_ctr3_effect <- matrix(nrow = 500, ncol = 0)
+for(f in unique(county_stayhome$fips)){
+  county_idx <- which(county_stayhome$fips == f)
+  fit <- county_fit[, county_idx]
+  fit <- t(apply(fit, 1, cumsum))
+  ctr1 <- county_ctr1[, county_idx]
+  ctr1 <- t(apply(ctr1, 1, cumsum))
+  ctr3 <- county_ctr3[, county_idx]
+  ctr3 <- t(apply(ctr3, 1, cumsum))
+  
+  county_fit_effect <- cbind(county_fit_effect, fit)
+  county_ctr1_effect <- cbind(county_ctr1_effect, ctr1)
+  county_ctr3_effect <- cbind(county_ctr3_effect, ctr3) 
+}
+```
+
+```{r}
+county_idx <- which(county_stayhome$index_desc == 1 & 
+                      county_stayhome$nchs == 1)
+county_pop <- county_stayhome$pop[county_idx]
+
+county_stayhome$y_eff[county_idx]
+head(county_fit_effect[, county_idx])
+```
+
+```{r}
+county_idx <- which(county_stayhome$index_desc == 1 & 
+                      county_stayhome$nchs == 1)
+county_pop <- county_stayhome$pop[county_idx]
+sum(county_stayhome$y_eff[county_idx])
+sum(county_pop)
+
+#dim(county_fit_effect[, county_idx])
+fit_eff <- apply(county_fit_effect[, county_idx], 1, sum)
+summary(fit_eff)
+summary(fit_eff / sum(county_pop) * 1e6)
+late_eff <- apply(county_ctr1_effect[, county_idx], 1, sum)
+summary(late_eff)
+summary(late_eff / sum(county_pop) * 1e6)
+early_eff <- apply(county_ctr3_effect[, county_idx], 1,sum)
+summary(early_eff)
+summary(early_eff / sum(county_pop) * 1e6)
+```
+
+```{r}
+# county_stayhome %<>% 
+#   mutate(
+#     fit_mu_eff = apply(county_fit_effect, 2, mean),
+#     fit_med_eff = apply(county_fit_effect, 2, quantile, probs = 0.5), # use posterior median to hand skewness
+#     fit_lo_eff = apply(county_fit_effect, 2, quantile, probs = 0.05),
+#     fit_hi_eff = apply(county_fit_effect, 2, quantile, probs = 0.95))
+# 
+# county_stayhome %<>% 
+#   mutate(
+#     ctr1_mu_eff = apply(county_ctr1_effect, 2, mean),
+#     ctr1_med_eff = apply(county_ctr1_effect, 2, quantile, probs = 0.5), # use posterior median to hand skewness
+#     ctr1_lo_eff = apply(county_ctr1_effect, 2, quantile, probs = 0.05),
+#     ctr1_hi_eff = apply(county_ctr1_effect, 2, quantile, probs = 0.95),
+#     ctr3_mu_eff = apply(county_ctr3_effect, 2, mean),
+#     ctr3_med_eff = apply(county_ctr3_effect, 2, quantile, probs = 0.5), # use posterior median to hand skewness
+#     ctr3_lo_eff = apply(county_ctr3_effect, 2, quantile, probs = 0.05),
+#     ctr3_hi_eff = apply(county_ctr3_effect, 2, quantile, probs = 0.95))
+
+# xx <- county_stayhome %>% 
+#   filter(index_desc == 1)
+# 
+# summary(xx$date)
+# summary(xx$days_since_intrv_stayhome)
+# 
+# xx %<>% 
+#   group_by(nchs) %>% 
+#   summarize(y_eff = median(y_eff / pop),
+#             fit_med_eff = median(fit_med_eff / pop),
+#             fit_lo_eff = median(fit_lo_eff / pop),
+#             fit_hi_eff = median(fit_hi_eff / pop),
+#             late_med_eff = median(ctr1_med_eff / pop), 
+#             late_lo_eff = median(ctr1_lo_eff / pop), 
+#             late_hi_eff = median(ctr1_hi_eff / pop), 
+#             early_med_eff = median(ctr3_med_eff / pop), 
+#             early_lo_eff = median(ctr3_lo_eff / pop), 
+#             early_hi_eff = median(ctr3_hi_eff / pop))
+
+```
+
+### ------ decrease
+
+```{r}
+county_decrease <- read_feather("../county_train_decrease.feather")
+county_fit <- readRDS("./roll_deaths_decrease/county_fit.rds")
+county_ctr1 <- readRDS("./roll_deaths_decrease/county_ctr1.rds")
+county_ctr3 <- readRDS("./roll_deaths_decrease/county_ctr3.rds")
+
+county_decrease %<>% 
+  mutate(row = row_number()) %>% 
+  group_by(fips) %>% 
+  arrange(date) %>% 
+  mutate(y_eff = cumsum(y), 
+         index = row_number(), 
+         index_desc = sort(index, decreasing = TRUE)) %>%
+  ungroup() %>% 
+  arrange(row)
+```
+
+```{r}
+## generate cumulative effect summary
+county_fit_effect <- matrix(nrow = 500, ncol = 0)
+county_ctr1_effect <- matrix(nrow = 500, ncol = 0)
+county_ctr3_effect <- matrix(nrow = 500, ncol = 0)
+for(f in unique(county_decrease$fips)){
+  county_idx <- which(county_decrease$fips == f)
+  fit <- county_fit[, county_idx]
+  fit <- t(apply(fit, 1, cumsum))
+  ctr1 <- county_ctr1[, county_idx]
+  ctr1 <- t(apply(ctr1, 1, cumsum))
+  ctr3 <- county_ctr3[, county_idx]
+  ctr3 <- t(apply(ctr3, 1, cumsum))
+  
+  county_fit_effect <- cbind(county_fit_effect, fit)
+  county_ctr1_effect <- cbind(county_ctr1_effect, ctr1)
+  county_ctr3_effect <- cbind(county_ctr3_effect, ctr3) 
+}
+```
+
+```{r}
+county_idx <- which(county_decrease$index_desc == 1 & 
+                      county_decrease$nchs == 1)
+county_pop <- county_decrease$pop[county_idx]
+
+county_decrease$y_eff[county_idx]
+head(county_fit_effect[, county_idx])
+```
+
+```{r}
+county_idx <- which(county_decrease$index_desc == 1 & 
+                      county_decrease$nchs == 1)
+county_pop <- county_decrease$pop[county_idx]
+sum(county_decrease$y_eff[county_idx])
+sum(county_pop)
+
+#dim(county_fit_effect[, county_idx])
+fit_eff <- apply(county_fit_effect[, county_idx], 1, sum)
+summary(fit_eff)
+summary(fit_eff / sum(county_pop) * 1e6)
+late_eff <- apply(county_ctr1_effect[, county_idx], 1, sum)
+summary(late_eff)
+summary(late_eff / sum(county_pop) * 1e6)
+early_eff <- apply(county_ctr3_effect[, county_idx], 1,sum)
+summary(early_eff)
+summary(early_eff / sum(county_pop) * 1e6)
+```
