@@ -1,3 +1,32 @@
+gg_days_since_sampling <- function(data, name) {
+  p <- data %>% 
+    ggplot() + 
+    geom_point(aes(x=date, y=y)) + 
+    geom_line(aes(x=date, y=fit_med), 
+              col = "blue") + 
+    geom_ribbon(aes(x=date, ymin=fit_lo, ymax=fit_hi), 
+                alpha= 0.1, fill = "blue") + 
+    geom_line(aes(x=date, y=ctr1_med), 
+              col = "red") + 
+    geom_ribbon(aes(x=date, ymin=ctr1_lo, ymax=ctr1_hi), 
+                alpha= 0.1, fill = "red") + 
+    labs(title = name, x = "", y = "") + 
+    xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
+
+    p <- p +
+      geom_vline(aes(xintercept = decrease_50_total_visiting), color = "purple") + 
+      geom_vline(aes(xintercept = stayhome), color = "blue") +
+      geom_vline(aes(xintercept = threshold_day), color = "red") + 
+      geom_vline(aes(xintercept = decrease_50_total_visiting + 12), linetype="dotted", color = "purple") + 
+      geom_vline(aes(xintercept = stayhome + 12), linetype="dotted", color = "blue") +
+      geom_vline(aes(xintercept = threshold_day + 12), linetype="dotted", color = "red")
+  
+  p
+  
+}
+
+
+
 gg_fit_sampling <- function(data, name, lag_decrease = NULL, lag_stayhome = NULL) {
   p <- data %>% 
     ggplot() + 
@@ -110,20 +139,35 @@ gg_days_btwn_sampling <- function(data, name, up, down, lag_decrease = NULL, lag
       xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
     
     if(!is.null(lag_decrease)) {
-      p <- p + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting), color = "purple") + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease), linetype="dotted", color = "purple") + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + down), linetype="dotted", color = "green") + 
+      p <- p +
+      geom_vline(aes(xintercept = decrease_50_total_visiting), color = "purple") +
+      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease), linetype="dotted", color = "purple") +
+      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + down), linetype="dotted", color = "green") +
       geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + up), linetype="dotted", color = "red")
     }
+  
+  # if(!is.null(lag_decrease)) {
+  #   p <- p + 
+  #     geom_vline(aes(xintercept = decrease_40_total_visiting), color = "purple") + 
+  #     geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease), linetype="dotted", color = "purple") + 
+  #     geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease + down), linetype="dotted", color = "green") + 
+  #     geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease + up), linetype="dotted", color = "red")
+  # }
     
-    if(!is.null(lag)) {
-      p <- p + 
-      geom_vline(aes(xintercept = stayhome), color = "blue") + 
-      geom_vline(aes(xintercept = stayhome + lag), linetype="dotted", color = "blue") + 
-      geom_vline(aes(xintercept = stayhome + lag + down), linetype="dotted", color = "green") + 
-      geom_vline(aes(xintercept = stayhome + lag + up), linetype="dotted", color = "red")
-    }
+    # if(!is.null(lag)) {
+    #   p <- p + 
+    #   geom_vline(aes(xintercept = stayhome), color = "blue") + 
+    #   geom_vline(aes(xintercept = stayhome + lag), linetype="dotted", color = "blue") + 
+    #   geom_vline(aes(xintercept = stayhome + lag + down), linetype="dotted", color = "green") + 
+    #   geom_vline(aes(xintercept = stayhome + lag + up), linetype="dotted", color = "red")
+    # }
+  if(!is.null(lag)) {
+    p <- p +
+    geom_vline(aes(xintercept = schools), color = "blue") +
+    geom_vline(aes(xintercept = schools + lag), linetype="dotted", color = "blue") +
+    geom_vline(aes(xintercept = schools + lag + down), linetype="dotted", color = "green") +
+    geom_vline(aes(xintercept = schools + lag + up), linetype="dotted", color = "red")
+  }
 
   p
 
@@ -148,20 +192,35 @@ gg_days_btwn_effect <- function(data, name, up, down, lag_decrease = NULL, lag =
       labs(title = name, x = "", y = "") + 
       xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
     
-    if(!is.null(lag_decrease)) {
-      p <- p + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting), color = "purple") + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease), linetype="dotted", color = "purple") + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + down), linetype="dotted", color = "green") + 
-      geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + up), linetype="dotted", color = "red")
-    }
+    # if(!is.null(lag_decrease)) {
+    #   p <- p + 
+    #   geom_vline(aes(xintercept = decrease_50_total_visiting), color = "purple") + 
+    #   geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease), linetype="dotted", color = "purple") + 
+    #   geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + down), linetype="dotted", color = "green") + 
+    #   geom_vline(aes(xintercept = decrease_50_total_visiting + lag_decrease + up), linetype="dotted", color = "red")
+    # }
+  
+  if(!is.null(lag_decrease)) {
+    p <- p + 
+      geom_vline(aes(xintercept = decrease_40_total_visiting), color = "purple") + 
+      geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease), linetype="dotted", color = "purple") + 
+      geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease + down), linetype="dotted", color = "green") + 
+      geom_vline(aes(xintercept = decrease_40_total_visiting + lag_decrease + up), linetype="dotted", color = "red")
+  }
     
-    if(!is.null(lag)) {
+    # if(!is.null(lag)) {
+    #   p <- p + 
+    #   geom_vline(aes(xintercept = stayhome), color = "blue") + 
+    #   geom_vline(aes(xintercept = stayhome + lag), linetype="dotted", color = "blue") + 
+    #   geom_vline(aes(xintercept = stayhome + lag + down), linetype="dotted", color = "green") + 
+    #   geom_vline(aes(xintercept = stayhome + lag + up), linetype="dotted", color = "red")
+    # }
+      if(!is.null(lag)) {
       p <- p + 
-      geom_vline(aes(xintercept = stayhome), color = "blue") + 
-      geom_vline(aes(xintercept = stayhome + lag), linetype="dotted", color = "blue") + 
-      geom_vline(aes(xintercept = stayhome + lag + down), linetype="dotted", color = "green") + 
-      geom_vline(aes(xintercept = stayhome + lag + up), linetype="dotted", color = "red")
+      geom_vline(aes(xintercept = schools), color = "blue") + 
+      geom_vline(aes(xintercept = schools + lag), linetype="dotted", color = "blue") + 
+      geom_vline(aes(xintercept = schools + lag + down), linetype="dotted", color = "green") + 
+      geom_vline(aes(xintercept = schools + lag + up), linetype="dotted", color = "red")
     }
 
   p

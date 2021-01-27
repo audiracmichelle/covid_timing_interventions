@@ -10,7 +10,7 @@ county_fit <- readRDS("./county_fit.rds")
 #source("../../plot_foo.R")
 
 ## Read county_future
-county_pred <- read_feather("../../county_train_stayhome.feather")
+county_pred <- read_feather("../../county_train_stayhome_2.feather")
 #dim(county_pred)
 #summary(county_pred$date[county_pred$index_desc == 1])
 
@@ -18,7 +18,7 @@ county_pred <- read_feather("../../county_train_stayhome.feather")
 # county_pred %<>%
 #   filter(date <= as.Date("2020-05-05"))
 #dim(county_pred)
-# ---- -----
+# ---- ----
 
 ## obtain distribution values from fit sampling
 county_pred %<>% 
@@ -69,15 +69,14 @@ gg_days_since_sampling <- function(data, name) {
     xlim(as.Date("2020-03-01"), as.Date("2020-04-30"))
   
   p <- p +
-    geom_vline(aes(xintercept = restaurants), color = "blue") + 
+    geom_vline(aes(xintercept = schools), color = "blue") + 
     geom_vline(aes(xintercept = threshold_day), color = "red") + 
-    geom_vline(aes(xintercept = restaurants + 12), linetype="dotted", color = "blue") + 
+    geom_vline(aes(xintercept = schools + 12), linetype="dotted", color = "blue") + 
     geom_vline(aes(xintercept = threshold_day + 12), linetype="dotted", color = "red")
   
   p
   
 }
-
 
 for(c in 1:3) {
     fips_ <- county_pred %>% 

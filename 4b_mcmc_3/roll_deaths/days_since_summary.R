@@ -10,15 +10,15 @@ county_fit <- readRDS("./county_fit.rds")
 #source("../../plot_foo.R")
 
 ## Read county_future
-county_pred <- read_feather("../../county_train_stayhome.feather")
+county_pred <- read_feather("../../county_train_stayhome_3.feather")
 #dim(county_pred)
 #summary(county_pred$date[county_pred$index_desc == 1])
 
-# ---- unnecessary ----
-# county_pred %<>%
-#   filter(date <= as.Date("2020-05-05"))
+#---- unnecessary ----
+#county_pred %<>%
+#  filter(date <= as.Date("2020-05-05"))
 #dim(county_pred)
-# ---- -----
+#---- ----
 
 ## obtain distribution values from fit sampling
 county_pred %<>% 
@@ -77,7 +77,6 @@ gg_days_since_sampling <- function(data, name) {
   p
   
 }
-
 
 for(c in 1:3) {
     fips_ <- county_pred %>% 
