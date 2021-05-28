@@ -6,21 +6,45 @@ np = import("numpy")
 scipy_stats = import("scipy.stats")
 nbinom = scipy_stats$nbinom
 
+
+
 stan_input_data = function(
   county_train,
   type=c("stayhome", "decrease"),
-  lag=12
+  lag=12,
+  order=2
 ) {
   county_train = county_train %>%
     mutate(fips_f = as.factor(fips)) %>% 
-    mutate(fips_id = as.integer(fips_f))
+    mutate(fips_id = as.integer(fips_f)) %>% 
+    mutate(state_f = as.factor(state)) %>% 
+    mutate(state_id = as.integer(state_f)) %>% 
+    arrange(fips_id, days_since_thresh)
   
   fips_ids = levels(county_train$fips_f)
+  states_ids = levels(county_train$state_f)
   
   tscale = 100.0
   t1 = county_train$days_since_thresh / tscale
   t1_2 = t1^2
-  tpoly_pre = cbind(1, t1, t1_2)
+  tpoly_pre = cbind(1, t1)
+  if (order > 1)
+    for (j in 2:order)
+      tpoly_pre = cbind(tpoly_pre, t1^j)  
+  
+  # this will take time but we want to compute a temporal index
+  t = county_train$days_since_thresh
+  t = 1 + t - min(t) # so it starts from 1
+  fips = county_train$fips
+  fips_t_index = setNames(1:nrow(county_train), nm=paste(fips, t, sep="_"))
+  fips_tm1 = paste(fips, t - 1, sep="_")
+  tm1_pointer = fips_t_index[fips_tm1]
+  tm1_pointer[is.na(tm1_pointer)] = 0
+  tm1_pointer = tm1_pointer
+  
+  fips_id = county_train$fips_id
+  county_brks = c(0, which(fips_id[-1] != fips_id[-length(fips_id)]), length(fips_id))
+  
   
   if (type[1] == "stayhome") {
     days_since_intrv = county_train$days_since_intrv_stayhome
@@ -32,8 +56,10 @@ stan_input_data = function(
   days_since_intrv[is.na(days_since_intrv)] = -1e6
 
   t2 = pmax((days_since_intrv - lag) / tscale, 0)
-  t2_2 =  t2^2
-  tpoly_post = cbind(t2, t2_2)
+  tpoly_post = matrix(t2, ncol=1)
+  if (order > 1)
+    for (j in 2:order)
+      tpoly_post = cbind(tpoly_post, t2^j)
   
   fips = levels(county_train$fips_f)
   y = county_train$y
@@ -62,12 +88,19 @@ stan_input_data = function(
   # normalizing_stats = tibble(variable=varname, mean=mu, sd=sig)
   # write_csv(normalizing_stats, "normalizing_stats.csv")
   
+  time_id = as.integer(county_train$days_since_thresh)
+  time_id = 1 + time_id - min(time_id)
+  Tmax = max(time_id)
+  nchs_id = as.integer(county_train$nchs)
+  time_nchs_id = time_id + Tmax * (nchs_id - 1)
+  
   list(
     N = nrow(county_train),
     D_pre = 4,
     D_post = 1,
     fips_ids=fips_ids,
     M = length(fips),
+    N_states = length(states_ids),
     X_pre = X_pre,
     X_post = X_post,
     offset = offset,
@@ -75,9 +108,19 @@ stan_input_data = function(
     days_since_intrv=days_since_intrv,
     y = y,
     tpoly_post=tpoly_post,
-    nchs_id = as.integer(county_train$nchs),
+    time_id = time_id,
+    time_nchs_id = time_nchs_id,
+    Tmax = Tmax,
+    nchs_id = nchs_id,
+    mask = rep(1, nrow(county_train)),
+    use_mask=FALSE,
+    order=order,
     county_id = county_train$fips_id,
-    normalizing_stats=normalizing_stats
+    state_id = county_train$state_id,
+    normalizing_stats=normalizing_stats,
+    tm1_index=tm1_pointer,
+    county_brks=county_brks,
+    county_lens=table(fips_id)
   )
 }
 
@@ -144,23 +187,48 @@ stan_input_graph_data = function(
 }
 
 
+stan_input_data_cubic = function(
+  county_train,
+  type=c("stayhome", "decrease"),
+  lag=12
+) {
+  output = stan_input_data(county_train, type=type, lag=lag)
+  # now override the time polynomials
+  output$tpoly_pre = cbind(output$tpoly_pre, output$tpoly_pre[ ,2]^3)
+  output$tpoly_post = cbind(output$tpoly_post, output$tpoly_post[ ,1]^3)
+  output
+}
 
 my_posterior_predict = function (
   fit,
   new_df,
   type=c("stayhome", "decrease"),
   eval_pre = TRUE,
-  lag=12
+  lag=12,
+  states=FALSE,
+  spatial=FALSE,
+  rand_lag=FALSE,
+  temporal=FALSE,
+  order=2
 ) {
-  new_data = stan_input_data(new_df, type, lag=lag)
+  new_data = stan_input_data(new_df, type, order=order, lag=lag)
   parnames = c(
     "nchs_pre", "nchs_post", "beta_covars_pre",
     "beta_covars_post", "beta_covars_post",
     "baseline_pre", "baseline_post",
     "overdisp", "rand_eff",
-    "Omega_rand_eff", "scale_rand_eff",
+    "scale_rand_eff",
     "log_rate_pre_interv"
   )
+  if (spatial)
+    parnames = c(parnames, "spatial_eff")
+  if (rand_lag)
+    parnames = c(parnames, "lag")
+  if (states)
+    parnames = c(parnames, "state_eff")
+  if (temporal)
+    parnames = c(parnames, "time_term")
+
   pars = rstan::extract(fit, pars=parnames)
   N = length(new_data$y)
   nsamples = nrow(pars$nchs_pre)
@@ -168,6 +236,12 @@ my_posterior_predict = function (
   # check compatible size of new data and previous
   tpoly_pre = np$expand_dims(new_data$tpoly_pre, 0L)
   rand_eff_unrolled = np$array(pars$rand_eff[ ,new_data$county_id, ])
+  
+  if (states) {
+    state_eff_unrolled = np$array(pars$state_eff[ ,new_data$state_id, ])
+    rand_eff_unrolled = rand_eff_unrolled + state_eff_unrolled
+  }
+    
   rand_eff_term = np$sum(
     np$multiply(tpoly_pre, rand_eff_unrolled), -1L
   )
@@ -189,10 +263,12 @@ my_posterior_predict = function (
     pre_term = np$sum(np$multiply(pre_term, tpoly_pre), -1L)
     offset_ = t(matrix(rep(new_data$offset, times=nsamples), ncol=nsamples))
     pre_term = pre_term + rand_eff_term + offset_
+    if (temporal)
+      pre_term = pre_term + np$array(pars$time_term)
   } else {
     pre_term = np$array(pars$log_rate_pre_interv)
   }
-
+  
   #
   if ("tpoly_post" %in% names(new_data)) {
     tpoly_post = np$expand_dims(new_data$tpoly_post, 0L)
@@ -205,7 +281,7 @@ my_posterior_predict = function (
   X_post = np$expand_dims(X_post, 3L)
   beta_covars_post = np$expand_dims(np$array(pars$beta_covars_post), 1L)
   covar_baseline_post = np$sum(np$multiply(X_post, beta_covars_post), -2L)
-  nchs_post_unrolled = np$array(pars$nchs_post[ ,new_data$nchs_id, ])
+  nchs_post_unrolled = np$array(pars$nchs_post[ ,new_data$nchs_id, , drop=FALSE])
   baseline_post = np$expand_dims(pars$baseline_post, 1L)
   post_term = np$add(
     np$add(baseline_post, nchs_post_unrolled),
@@ -227,6 +303,7 @@ my_posterior_predict = function (
     yhat=rate,
     log_yhat=log_rate,
     log_yhat_no_rand_eff=log_rate - rand_eff_term,
+    yhat_no_rand_eff=exp(log_rate - rand_eff_term),
     rand_eff_term=rand_eff_term,
     pre_term=pre_term,
     post_term=post_term,
@@ -316,6 +393,7 @@ my_posterior_predict_rand_lag = function (
     tpoly_post=tpoly_post,
     log_yhat=log_rate,
     log_yhat_no_rand_eff=log_rate - rand_eff_term,
+    yhat_no_rand_eff=exp(log_rate - rand_eff_term),
     rand_eff_term=rand_eff_term,
     pre_term=pre_term,
     post_term=post_term,

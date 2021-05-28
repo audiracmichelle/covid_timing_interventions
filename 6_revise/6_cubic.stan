@@ -5,37 +5,34 @@ data {
   int<lower=0> D_post; // number of covariates after internvention
   int<lower=0> M; // number of counties
   int<lower=0> y[N]; // deaths
-  int<lower=0,upper=1> mask[N]; // treats entries with value one as missing data
-  int<lower=0,upper=1> use_mask; // ignore some data entries (used for cross-validation training)
   matrix[N, D_pre] X_pre; // covars for pre-trend
   matrix[N, D_post] X_post;  // covars for post-trend, the only one here is days since intervention
   vector[N] offset;  // log of population
   int<lower=0> county_id[N];  // county indicator
   int<lower=0> nchs_id[N];  // nchs indicator
-  int<lower=1> order;  // polynomial order for the trends
-  matrix[N, order + 1] tpoly_pre; // days since threhsold
-  matrix[N, order] tpoly_post; // days since intervention
+  matrix[N, 4] tpoly_pre; // days since threhsold
+  matrix[N, 3] tpoly_post; // days since intervention
 }
 
 
 parameters {
-  matrix<lower=-10.0,upper=10.0>[M, order + 1] rand_eff;
-  matrix<lower=-10.0,upper=10.0>[6, order + 1] nchs_pre;
-  matrix<lower=-10.0,upper=10.0>[D_pre, order + 1] beta_covars_pre;
-  row_vector<lower=-10.0,upper=10.0>[order + 1] baseline_pre;
-  matrix<lower=-10.0,upper=10.0>[D_post, order] beta_covars_post;
-  row_vector<lower=-10.0,upper=10.0>[order] baseline_post;
-  matrix<lower=-10.0,upper=10.0>[6, order] nchs_post;
   real<lower=0.025, upper=300.0> overdisp;
-  corr_matrix[order + 1] Omega_rand_eff;
-  vector<lower=0.001, upper=20.0>[order + 1] scale_rand_eff;
+  matrix<lower=-10.0,upper=10.0>[M, 4] rand_eff;
+  matrix<lower=-10.0,upper=10.0>[6, 4] nchs_pre;
+  matrix<lower=-10.0,upper=10.0>[D_pre, 4] beta_covars_pre;
+  row_vector<lower=-10.0,upper=10.0>[4] baseline_pre;
+  matrix<lower=-10.0,upper=10.0>[D_post, 3] beta_covars_post;
+  row_vector<lower=-10.0,upper=10.0>[3] baseline_post;
+  matrix<lower=-10.0,upper=10.0>[6, 3] nchs_post;
+  corr_matrix[4] Omega_rand_eff;
+  vector<lower=0.001, upper=10.0>[4] scale_rand_eff;
 }
 
 transformed parameters {
-  cov_matrix[order + 1] Sigma_rand_eff = quad_form_diag(Omega_rand_eff, scale_rand_eff);
+  cov_matrix[4] Sigma_rand_eff = quad_form_diag(Omega_rand_eff, scale_rand_eff);
 
   vector[N] rand_eff_term = rows_dot_product(
-    rand_eff[county_id, :],  // random effects unfolded
+    rand_eff[county_id, 1:4],  // random effects unfolded
     tpoly_pre
   );
 
@@ -43,7 +40,7 @@ transformed parameters {
     (
       + X_pre * beta_covars_pre  // interaction with covariates pre-interv
       + rep_matrix(baseline_pre, N)
-      + nchs_pre[nchs_id, :]
+      + nchs_pre[nchs_id, 1:4]
     ),
     tpoly_pre
   );
@@ -51,7 +48,7 @@ transformed parameters {
     (
       X_post * beta_covars_post  // interaction with covariates post-interv
       + rep_matrix(baseline_post, N)
-      + nchs_post[nchs_id, :]
+      + nchs_post[nchs_id, 1:3]
     ),
     tpoly_post
   );
@@ -66,28 +63,21 @@ model {
   scale_rand_eff ~ normal(0, 10.0);
   to_vector(beta_covars_pre) ~ normal(0, 10.0);
   to_vector(beta_covars_post) ~ normal(0, 10.0);
-  nchs_pre[1,:] ~ normal(0, 0.001);
-  nchs_post[1,:] ~ normal(0, 0.001);
-  to_vector(nchs_pre[2:6, :]) ~ normal(0, 10.0);
-  to_vector(nchs_post[2:6, :]) ~ normal(0, 10.0);
+  nchs_pre[1,1:4] ~ normal(0, 0.001);
+  nchs_post[1,1:3] ~ normal(0, 0.001);
+  to_vector(nchs_pre[2:6,1:4]) ~ normal(0, 10.0);
+  to_vector(nchs_post[2:6,1:3]) ~ normal(0, 10.0);
   baseline_post ~ normal(0.0, 10.0);
   baseline_pre ~ normal(0.0, 10.0);
   
   // random effect priors (independent)
   for (i in 1:M)
-    row(rand_eff, i) ~ multi_normal(rep_vector(0.0, order + 1), Sigma_rand_eff);
-  for (j in 1:(order + 1))
+    row(rand_eff, i) ~ multi_normal(rep_vector(0.0, 4), Sigma_rand_eff);
+  for (j in 1:4)
     col(rand_eff, j) ~ normal(0, 100.0);  // tiny reg
 
   // likelihood
-  if (use_mask == 0) {
-    y ~ neg_binomial_2(exp(log_rate) + 1e-8, overdisp);
-  }
-  else {
-    for (n in 1:N)
-      if (mask[n] == 1)
-        target += neg_binomial_2_lpmf(y[n] | exp(log_rate[n]) + 1e-8, overdisp);
-  }
+  y ~ neg_binomial_2(exp(log_rate) + 1e-8, overdisp);
 }
 
 generated quantities {

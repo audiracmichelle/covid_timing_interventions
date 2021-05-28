@@ -28,6 +28,9 @@ data {
   int csorted[M];   // pointer to nodes where they are sorted by component
   int cbrks[N_comps + 1];   // where each component begins and ends in the above pointer
   vector<lower=0>[N_comps] scaling_factor;   // function of the average number of neighbors
+  // for temporal correlation
+  int<lower=0> Tmax;
+  int<lower=1, upper=Tmax> time_id[N];
 }
 
 
@@ -49,7 +52,11 @@ parameters {
   row_vector<lower=-10,upper=10>[2] baseline_post;
   matrix<lower=-10,upper=10>[6, 2] nchs_post;
   real<lower=0.025, upper=200.0> overdisp;
-  //
+
+  // for AR(1) error
+  vector<lower=-10,upper=10>[Tmax * 6] time_eff;
+  real<lower=0.0, upper=1.0> autocor;
+  real<lower=0.0, upper=20.0> scale_time_eff;
 }
 
 transformed parameters {
@@ -87,7 +94,8 @@ transformed parameters {
     ),
     tpoly_post
   );
-  vector[N] log_rate_pre_interv = offset + convolved_eff_term + pre_term;
+  vector[N] time_term = time_eff[time_id + (nchs_id - 1) * Tmax];
+  vector[N] log_rate_pre_interv = offset + convolved_eff_term + pre_term + time_term;
   vector[N] log_rate = log_rate_pre_interv + post_term;
 }
 
@@ -112,6 +120,16 @@ model {
     col(spatial_eff, j) ~ normal(0.0, 100.0);
     col(rand_eff, j) ~ normal(0.0, 100.0);
   }
+
+  // time eff
+  for (j in 1:6) {
+      time_eff[(Tmax * (j - 1) + 2:(Tmax * j)] ~ normal(autocor * (Tmax * (j - 1) + 1:(Tmax * j - 1), scale_time_eff);
+      time_eff[Tmax * (j - 1) + 1] ~ normal(0, scale_time_eff);
+      sum()
+  }
+  autocor ~ beta(2, 2);
+  scale_time_eff ~ normal(0, 20.0);
+
 
   // otherparams
   to_vector(beta_covars_pre) ~ normal(0, 10.0);

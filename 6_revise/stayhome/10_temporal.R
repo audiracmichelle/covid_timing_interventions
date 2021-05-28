@@ -16,23 +16,23 @@ county_train <- read_feather("../../county_train_.feather") %>%   # 1454 countie
     max(days_since_thresh) >= 7,  # min data points, 909 counties
     max(cum_deaths) >= 1 # there as an outbreak, 400 counties
   ) %>%  
-  # filter(state != "New York") %>% 
+  # filter(!((state == "New York") & (days_since_intrv_decrease >= 14))) %>%
   ungroup()
 length(unique(county_train$fips))
 
 
 model_data = stan_input_data(county_train, type="decrease", lag=14)
 
-model = rstan::stan_model("../1_basemodel.stan")
+model = rstan::stan_model("../10_temporal.stan")
 
 # first run with variational inference,
-# it should take ~ 15 mins for default tol (0.01) and ~40min for 50k iters
+# it should take ~ 25 mins for default tol (0.01) and ~40min for 50k iters
 fit = rstan::vb(
   model, 
   data=model_data,
   adapt_engaged=FALSE,
-  eta = 0.25,
-  iter=15000,
+  eta = 0.1,
+  iter=35000,
   tol_rel_obj=0.003,
   adapt_iter=250,
   init="0",
@@ -40,17 +40,17 @@ fit = rstan::vb(
 )
 
 
-zparnames = c(
+parnames = c(
   "nchs_pre", "nchs_post", "beta_covars_pre",
   "beta_covars_post", "beta_covars_post",
   "baseline_pre", "baseline_post",
-  "overdisp", "rand_eff",
+  "overdisp", "rand_eff", "autocor",
   "Omega_rand_eff", "scale_rand_eff"
 )
 pars = rstan::extract(fit, pars=parnames)
 
 # create list of parameter inialization=
-nchains = 4
+nchains = 2
 init_lists = map(1:nchains, function(i) {
   map(pars, function(par) {
     if (length(dim(par))==1)
@@ -66,32 +66,28 @@ init_lists = map(1:nchains, function(i) {
 for (i in 1:nchains)
   init_lists[[i]]$beta_covars_post = matrix(init_lists[[i]]$beta_covars_post, nrow=1)
 
-# now pass solution
-fit2 = rstan::sampling(
-  model,
-  data=model_data,
-  chains=nchains,
-  iter=2000,
-  warmup=1900,
-  init=init_lists
-)
+# now pass solutpion
+# fit2 = rstan::sampling(
+#   model,
+#   data=model_data,
+#   chains=nchains,
+#   iter=1000,
+#   warmup=500,
+#   init=init_lists
+# )
 
-saveRDS(fit, "models/1_basemodel.rds")
-saveRDS(fit2, "models/1_basemodel_mcmc.rds")
-
-
-# revised_0 uses the joint dataset
-# saveRDS(fit, paste("./model_full_rstan_var_revised_0.rds", sep = ""))
+saveRDS(fit, paste("./10_temporal.rds", sep = ""))
+fit = readRDS("./10_temporal.rds")
 
 # revised_2 uses the joint dataset with min cum deahts >= 1
 # saveRDS(fit, paste("./model_full_rstan_var_revised_2.rds", sep = ""))
 
 # 14 experiment
-# saveRDS(fit, paste("./model_full_rstan_var_revised_14.rds", sep = ""))
+# saveRDS(fit, paste("./model_full_rstan_var_revised_.rds", sep = ""))
 
-# removes the full state of ny
+# partially removes the full state of ny
 # saveRDS(fit, paste("./model_full_rstan_var_revised_no_ny.rds", sep = ""))
-
+# fit = read_rds("model_full_rstan_var_revised_no_ny.rds")
 # this one uses the old dataset
 # saveRDS(fit, paste("./model_full_rstan_var.rds", sep = ""))
 
@@ -120,7 +116,7 @@ saveRDS(fit2, "models/1_basemodel_mcmc.rds")
 # it's working !
 county_lp_var = exp(rstan::extract(fit, pars="log_rate")$log_rate)
 f1 = "06037"  #L.A
-f1 = "36081"  # queens NY
+# f1 = "36081"  # queens NY
 # f1 = "53033"  # king county WA
 ix = which(county_train$fips == f1)
 
@@ -139,42 +135,62 @@ dbtwn = dbtwn[dbtwn$days_since_intrv_decrease >= 0, ]
 dbtwn = dbtwn$days_since_thresh[1]
 abline(v=dbtwn + 12, lty=3, col="gray")
 title(sprintf("FIPS %s", f1))
+# 
+# county_eval <- read_feather("../../county_train_.feather") %>%   # 1454 counties
+#   filter(date <= ymd("20200420")) %>%   # 1021 counties
+#   group_by(fips) %>%
+#   filter(
+#     max(days_since_thresh) >=a 7,  # min data points, 909 counties
+#     max(cum_deaths) >= 1 # there as an outbreak, 400 counties
+#   ) %>%  
+#   ungroup() %>% 
+#   filter(fips %in% unique(county_train$fips))
+county_eval = county_train
 
-
-predicted = my_posterior_predict(fit, county_train, type="decrease", lag=14, eval_pre = TRUE)
+ix = which(county_eval$fips == f1)
+predicted = my_posterior_predict(fit, county_eval, type="decrease", lag=14, temporal=TRUE, eval_pre = TRUE)
 pre_term = apply(predicted$pre_term[ ,ix], 2, median)
 post_term = apply(predicted$post_term[ ,ix], 2, median)
 log_yhat = apply(predicted$log_yhat[, ix], 2, median)
 
 plotdata = tibble(
-  prev_trend=pre_term,
+  prev_trend=exp(pre_term),
   # intervention_effect=post_term,
-  observed=log_yhat,
-  date=county_train$date[ix]
+  predicted=exp(log_yhat),
+  date=county_eval$date[ix]
 ) %>% 
   pivot_longer(-date)
 
-ggplot(plotdata) +
-  geom_line(aes(x=date, y=exp(value), color=name)) +
-  geom_vline(aes(xintercept=date[1] + dbtwn - 1), color="black", lty=2) +
-  geom_vline(aes(xintercept=date[1] + 12 + dbtwn - 1), color="black", lty=3) +
-  theme_minimal() +
-  labs(
-    title=sprintf("FIPS %s", f1),
-    subtitle="Counterfactual with/without intervention"
+plotdata2 = tibble(
+  y=county_eval$y[ix],
+  date=county_eval$date[ix],
+  days_since_intrv = county_eval$days_since_intrv_decrease[ix]
+) %>% mutate(
+  type=case_when(
+    (days_since_intrv < 14) ~ "dataset (pre-intervention)",
+    TRUE ~ "heldout (post-intervation)"
   )
+)
 
-# overdisp = rstan::extract(fit, pars="overdisp")$overdisp
-# hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
-# 
+# gam = 0.9
+# x = seq(-10.0, 10.0, length.out=100)
+# f1 = gam ^ x - 1
+# f2 = x * log(gam)
+# plot(x, f1, col="red", type="l")
+# lines(x, f2, col="blue")
 
-summary(fit, pars="beta_covars_post")
-# 
-# $summary
-# mean se_mean        sd      2.5%       25%
-#   beta_covars_post[1,1] -9.315510     NaN 0.7200549 -9.961611 -9.767993
-# beta_covars_post[1,2] -4.222426     NaN 4.5858222 -9.697035 -7.987915
-# 50%       75%     97.5% n_eff     khat
-# beta_covars_post[1,1] -9.525935 -9.130502 -7.241799   NaN 15.95767
-# beta_covars_post[1,2] -5.634270 -1.307760  6.323487   NaN 15.65625
-# 
+ggplot(plotdata) +
+  geom_line(aes(x=date, y=value, color=name)) +
+  geom_point(aes(x=date, y=y, shape=type), data=plotdata2) +
+  geom_vline(aes(xintercept=date[1] + dbtwn - 1), color="black", lty=2) +
+  geom_vline(aes(xintercept=date[1] + 14 + dbtwn - 1), color="black", lty=3) +
+  theme_minimal() +
+  scale_shape_manual(values=c(19, 21))
+
+overdisp = rstan::extract(fit, pars="overdisp")$overdisp
+hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
+
+
+autocor = rstan::extract(fit, pars="autocor")$autocor
+hist(autocor, col=alpha("red", 0.5), main="autocor posterior")
+

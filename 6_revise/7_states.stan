@@ -15,6 +15,8 @@ data {
   int<lower=1> order;  // polynomial order for the trends
   matrix[N, order + 1] tpoly_pre; // days since threhsold
   matrix[N, order] tpoly_post; // days since intervention
+  int<lower=0> N_states; // number of states
+  int<lower=0> state_id[N];  // county indicator
 }
 
 
@@ -28,14 +30,18 @@ parameters {
   matrix<lower=-10.0,upper=10.0>[6, order] nchs_post;
   real<lower=0.025, upper=300.0> overdisp;
   corr_matrix[order + 1] Omega_rand_eff;
+  corr_matrix[order + 1] Omega_state_eff;
   vector<lower=0.001, upper=20.0>[order + 1] scale_rand_eff;
+  matrix<lower=-10.0,upper=10.0>[N_states, order + 1] state_eff;
+  vector<lower=0.001, upper=20.0>[order + 1] scale_state_eff;
 }
 
 transformed parameters {
   cov_matrix[order + 1] Sigma_rand_eff = quad_form_diag(Omega_rand_eff, scale_rand_eff);
+  cov_matrix[3] Sigma_state_eff = quad_form_diag(Omega_state_eff, scale_state_eff);
 
   vector[N] rand_eff_term = rows_dot_product(
-    rand_eff[county_id, :],  // random effects unfolded
+    rand_eff[county_id, :] + state_eff[state_id, :],  // random effects unfolded
     tpoly_pre
   );
 
@@ -76,8 +82,12 @@ model {
   // random effect priors (independent)
   for (i in 1:M)
     row(rand_eff, i) ~ multi_normal(rep_vector(0.0, order + 1), Sigma_rand_eff);
-  for (j in 1:(order + 1))
+  for (i in 1:N_states)
+    row(state_eff, i) ~ multi_normal(rep_vector(0.0, 3), Sigma_state_eff);
+  for (j in 1:(order + 1)) {
+    col(state_eff, j) ~ normal(0, 100.0);  // tiny reg
     col(rand_eff, j) ~ normal(0, 100.0);  // tiny reg
+  }
 
   // likelihood
   if (use_mask == 0) {

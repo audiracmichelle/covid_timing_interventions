@@ -21,7 +21,7 @@ county_train <- read_feather("../../county_train_.feather") %>%   # 1454 countie
 length(unique(county_train$fips))
 
 
-model_data = stan_input_data(county_train, type="decrease", lag=14)
+model_data = stan_input_data(county_train, type="stayhome", lag=14)
 
 model = rstan::stan_model("../1_basemodel.stan")
 
@@ -33,14 +33,14 @@ fit = rstan::vb(
   adapt_engaged=FALSE,
   eta = 0.25,
   iter=15000,
-  tol_rel_obj=0.003,
+  tol_rel_obj=0.001,
   adapt_iter=250,
   init="0",
   output_samples=250
 )
 
 
-zparnames = c(
+parnames = c(
   "nchs_pre", "nchs_post", "beta_covars_pre",
   "beta_covars_post", "beta_covars_post",
   "baseline_pre", "baseline_post",
@@ -76,10 +76,6 @@ fit2 = rstan::sampling(
   init=init_lists
 )
 
-saveRDS(fit, "models/1_basemodel.rds")
-saveRDS(fit2, "models/1_basemodel_mcmc.rds")
-
-
 # revised_0 uses the joint dataset
 # saveRDS(fit, paste("./model_full_rstan_var_revised_0.rds", sep = ""))
 
@@ -87,7 +83,8 @@ saveRDS(fit2, "models/1_basemodel_mcmc.rds")
 # saveRDS(fit, paste("./model_full_rstan_var_revised_2.rds", sep = ""))
 
 # 14 experiment
-# saveRDS(fit, paste("./model_full_rstan_var_revised_14.rds", sep = ""))
+saveRDS(fit, "models/1_baseline.rds")
+saveRDS(fit2, "models/1_baseline_mcmc.rds")
 
 # removes the full state of ny
 # saveRDS(fit, paste("./model_full_rstan_var_revised_no_ny.rds", sep = ""))
@@ -120,8 +117,8 @@ saveRDS(fit2, "models/1_basemodel_mcmc.rds")
 # it's working !
 county_lp_var = exp(rstan::extract(fit, pars="log_rate")$log_rate)
 f1 = "06037"  #L.A
-f1 = "36081"  # queens NY
-# f1 = "53033"  # king county WA
+# f1 = "36081"  # queens NY
+f1 = "53033"  # king county WA
 ix = which(county_train$fips == f1)
 
 yi = county_train$y[ix]
@@ -135,13 +132,13 @@ lines(yhati, col="red")
 lines(yhati_95, col="blue", lty=2)
 lines(yhati_05, col="blue", lty=2)
 dbtwn = county_train[ix, ]
-dbtwn = dbtwn[dbtwn$days_since_intrv_decrease >= 0, ]
+dbtwn = dbtwn[dbtwn$days_since_intrv_stayhome >= 0, ]
 dbtwn = dbtwn$days_since_thresh[1]
 abline(v=dbtwn + 12, lty=3, col="gray")
 title(sprintf("FIPS %s", f1))
 
 
-predicted = my_posterior_predict(fit, county_train, type="decrease", lag=14, eval_pre = TRUE)
+predicted = my_posterior_predict(fit, county_train, type="stayhome", lag=14, eval_pre = TRUE)
 pre_term = apply(predicted$pre_term[ ,ix], 2, median)
 post_term = apply(predicted$post_term[ ,ix], 2, median)
 log_yhat = apply(predicted$log_yhat[, ix], 2, median)
@@ -164,17 +161,6 @@ ggplot(plotdata) +
     subtitle="Counterfactual with/without intervention"
   )
 
-# overdisp = rstan::extract(fit, pars="overdisp")$overdisp
-# hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
-# 
+overdisp = rstan::extract(fit, pars="overdisp")$overdisp
+hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
 
-summary(fit, pars="beta_covars_post")
-# 
-# $summary
-# mean se_mean        sd      2.5%       25%
-#   beta_covars_post[1,1] -9.315510     NaN 0.7200549 -9.961611 -9.767993
-# beta_covars_post[1,2] -4.222426     NaN 4.5858222 -9.697035 -7.987915
-# 50%       75%     97.5% n_eff     khat
-# beta_covars_post[1,1] -9.525935 -9.130502 -7.241799   NaN 15.95767
-# beta_covars_post[1,2] -5.634270 -1.307760  6.323487   NaN 15.65625
-# 

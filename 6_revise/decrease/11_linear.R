@@ -21,7 +21,7 @@ county_train <- read_feather("../../county_train_.feather") %>%   # 1454 countie
 length(unique(county_train$fips))
 
 
-model_data = stan_input_data(county_train, type="decrease", lag=14)
+model_data = stan_input_data(county_train, type="decrease", order=1, lag=14)
 
 model = rstan::stan_model("../1_basemodel.stan")
 
@@ -40,7 +40,7 @@ fit = rstan::vb(
 )
 
 
-zparnames = c(
+parnames = c(
   "nchs_pre", "nchs_post", "beta_covars_pre",
   "beta_covars_post", "beta_covars_post",
   "baseline_pre", "baseline_post",
@@ -50,7 +50,7 @@ zparnames = c(
 pars = rstan::extract(fit, pars=parnames)
 
 # create list of parameter inialization=
-nchains = 4
+nchains = 2
 init_lists = map(1:nchains, function(i) {
   map(pars, function(par) {
     if (length(dim(par))==1)
@@ -67,18 +67,18 @@ for (i in 1:nchains)
   init_lists[[i]]$beta_covars_post = matrix(init_lists[[i]]$beta_covars_post, nrow=1)
 
 # now pass solution
-fit2 = rstan::sampling(
-  model,
-  data=model_data,
-  chains=nchains,
-  iter=2000,
-  warmup=1900,
-  init=init_lists
-)
+# fit2 = rstan::sampling(
+#   model,
+#   data=model_data,
+#   chains=nchains,
+#   iter=1000,
+#   warmup=500,
+#   init=init_lists
+# )
 
-saveRDS(fit, "models/1_basemodel.rds")
-saveRDS(fit2, "models/1_basemodel_mcmc.rds")
-
+saveRDS(fit, "models/11_linear.rds")
+# saveRDS(fit2, "models/1_basemodel_mcmc.rds")
+fit = readRDS("models/11_linear.rds")
 
 # revised_0 uses the joint dataset
 # saveRDS(fit, paste("./model_full_rstan_var_revised_0.rds", sep = ""))
@@ -141,7 +141,7 @@ abline(v=dbtwn + 12, lty=3, col="gray")
 title(sprintf("FIPS %s", f1))
 
 
-predicted = my_posterior_predict(fit, county_train, type="decrease", lag=14, eval_pre = TRUE)
+predicted = my_posterior_predict(fit, county_train, type="decrease", order=1, lag=14, eval_pre = TRUE)
 pre_term = apply(predicted$pre_term[ ,ix], 2, median)
 post_term = apply(predicted$post_term[ ,ix], 2, median)
 log_yhat = apply(predicted$log_yhat[, ix], 2, median)
@@ -164,17 +164,16 @@ ggplot(plotdata) +
     subtitle="Counterfactual with/without intervention"
   )
 
-# overdisp = rstan::extract(fit, pars="overdisp")$overdisp
-# hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
+overdisp = rstan::extract(fit, pars="overdisp")$overdisp
+hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
 # 
 
-summary(fit, pars="beta_covars_post")
-# 
+# summary(fit, pars="beta_covars_post")
+# # 
 # $summary
-# mean se_mean        sd      2.5%       25%
-#   beta_covars_post[1,1] -9.315510     NaN 0.7200549 -9.961611 -9.767993
-# beta_covars_post[1,2] -4.222426     NaN 4.5858222 -9.697035 -7.987915
-# 50%       75%     97.5% n_eff     khat
-# beta_covars_post[1,1] -9.525935 -9.130502 -7.241799   NaN 15.95767
-# beta_covars_post[1,2] -5.634270 -1.307760  6.323487   NaN 15.65625
-# 
+# mean se_mean       sd      2.5%
+# beta_covars_post[1,1] -9.636239     NaN 0.489791 -9.978674
+# 25%       50%       75%     97.5%
+#   beta_covars_post[1,1] -9.906152 -9.790425 -9.587602 -8.264535
+# n_eff     khat
+# beta_covars_post[1,1]   NaN 16.72898

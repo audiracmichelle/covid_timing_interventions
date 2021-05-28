@@ -15,15 +15,17 @@ county_train <- read_feather("../../county_train_.feather") %>%   # 1454 countie
   filter(
     max(days_since_thresh) >= 7,  # min data points, 909 counties
     max(cum_deaths) >= 1 # there as an outbreak, 400 counties
-  ) %>%  
-  filter(!((state == "New York") & (days_since_intrv_decrease >= 14))) %>%
+  ) %>% 
+  mutate(mask = !((state == "New York") & (days_since_intrv_decrease >= 14))) %>%
   ungroup()
 length(unique(county_train$fips))
 
 
 model_data = stan_input_data(county_train, type="decrease", lag=14)
+model_data$mask = as.integer(county_train$mask)
+model_data$use_mask = TRUE
 
-model = rstan::stan_model("../hockey_stick_hyperprior.stan")
+model = rstan::stan_model("../1_basemodel.stan")
 
 # first run with variational inference,
 # it should take ~ 15 mins for default tol (0.01) and ~40min for 50k iters
@@ -33,7 +35,7 @@ fit = rstan::vb(
   adapt_engaged=FALSE,
   eta = 0.25,
   iter=15000,
-  tol_rel_obj=0.005,
+  tol_rel_obj=0.003,
   adapt_iter=250,
   init="0",
   output_samples=250
@@ -86,8 +88,9 @@ for (i in 1:nchains)
 # saveRDS(fit, paste("./model_full_rstan_var_revised_.rds", sep = ""))
 
 # partially removes the full state of ny
-# saveRDS(fit, paste("./model_full_rstan_var_revised_no_ny.rds", sep = ""))
-# fit = read_rds("model_full_rstan_var_revised_no_ny.rds")
+saveRDS(fit, paste("./models/1b_no_ny.rds", sep = ""))
+fit = read_rds("./models/1b_no_ny.rds")
+
 # this one uses the old dataset
 # saveRDS(fit, paste("./model_full_rstan_var.rds", sep = ""))
 
@@ -143,7 +146,9 @@ county_eval <- read_feather("../../county_train_.feather") %>%   # 1454 counties
     max(days_since_thresh) >= 7,  # min data points, 909 counties
     max(cum_deaths) >= 1 # there as an outbreak, 400 counties
   ) %>%  
-  ungroup()
+  ungroup() %>% 
+  filter(fips %in% unique(county_train$fips))
+
 
 ix = which(county_eval$fips == f1)
 predicted = my_posterior_predict(fit, county_eval, type="decrease", lag=14, eval_pre = TRUE)
@@ -185,3 +190,23 @@ ggplot(plotdata) +
 overdisp = rstan::extract(fit, pars="overdisp")$overdisp
 hist(overdisp, col=alpha("blue", 0.5), main="overdisp posterior")
 
+
+beta_covars_post = rstan::extract(fit, pars="beta_covars_post")$beta_covars_post
+# plot(fit, pars="beta_covars_post")
+# summary(fit, pars="beta_covars_post")
+
+# $summary
+# mean se_mean       sd      2.5%
+# beta_covars_post[1,1] -7.4545848     NaN 1.375375 -9.383863
+# beta_covars_post[1,2] -0.2352785     NaN 4.941961 -9.054295
+# 25%        50%       75%     97.5%
+#   beta_covars_post[1,1] -8.454615 -7.7571300 -6.723082 -4.339134
+# beta_covars_post[1,2] -4.242962 -0.4403435  3.940257  8.491664
+# n_eff     khat
+# beta_covars_post[1,1]   NaN 13.55193
+# beta_covars_post[1,2]   NaN 14.09415
+# 
+# tpoly_post = model_data$tpoly_post
+# beta_no_ny = beta_covars_post[ ,1, ]
+#   
+  

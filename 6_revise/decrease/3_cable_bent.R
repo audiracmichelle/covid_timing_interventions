@@ -44,13 +44,16 @@ parnames = c(
   "nchs_pre", "nchs_post", "beta_covars_pre",
   "beta_covars_post", "beta_covars_post",
   "baseline_pre", "baseline_post",
-  "overdisp", "rand_eff",
-  "Omega_rand_eff", "scale_rand_eff"
+  "overdisp", "rand_eff", "state_eff",
+  "Omega_rand_eff", "Omega_state_eff",
+  "scale_state_eff", "scale_rand_eff",
+  "lag_unc", "duration_unc"
 )
+
 pars = rstan::extract(fit, pars=parnames)
 
 # create list of parameter inialization=
-nchains = 2
+nchains = 4
 init_lists = map(1:nchains, function(i) {
   map(pars, function(par) {
     if (length(dim(par))==1)
@@ -67,14 +70,14 @@ for (i in 1:nchains)
   init_lists[[i]]$beta_covars_post = matrix(init_lists[[i]]$beta_covars_post, nrow=1)
 
 # now pass solution
-# fit2 = rstan::sampling(
-#   model,
-#   data=model_data,
-#   chains=nchains,
-#   iter=1000,
-#   warmup=500,
-#   init=init_lists
-# )
+fit2 = rstan::sampling(
+  model,
+  data=model_data,
+  chains=nchains,
+  iter=2000,
+  warmup=1900,
+  init=init_lists
+)
 
 # revised_0 uses the joint dataset
 # saveRDS(fit, paste("./model_full_rstan_var_revised_0.rds", sep = ""))
@@ -83,7 +86,8 @@ for (i in 1:nchains)
 # saveRDS(fit, paste("./model_full_rstan_var_revised_2.rds", sep = ""))
 
 # 14 experiment
-saveRDS(fit, paste("./model_full_rstan_var_revised_cable_bent.rds", sep = ""))
+saveRDS(fit, "models/cable_bent.rds")
+saveRDS(fit2, "models/cable_bent_mcmc.rds")
 
 # removes the full state of ny
 # saveRDS(fit, paste("./model_full_rstan_var_revised_no_ny.rds", sep = ""))
